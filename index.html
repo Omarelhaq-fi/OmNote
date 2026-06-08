@@ -86,6 +86,7 @@
             </div>
 
             <button class="btn-icon" style="color:var(--text-main); font-weight:bold; margin-left: 15px;" id="btn-review-queue" onclick="startReview()">📚 Review Queue (0)</button>
+            <button class="btn-icon" style="margin-left: 15px; color: var(--border-blue); font-weight: bold;" id="btn-auth-top" onclick="window.openAuthModal()">👤 Account</button>
         </div>
     </div>
 
@@ -287,8 +288,37 @@
         </div>
     </div>
 
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="modal" style="background: rgba(15,15,15,0.9);">
+        <div class="modal-content" style="background: #2b2b2b; width: 400px; max-width: 95vw; border-radius: 12px; padding: 30px; color: #fff; border: 1px solid #444; position: relative; text-align: center;">
+            <button onclick="closeModal('auth-modal')" style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#888; cursor:pointer; font-size: 1.5rem;">✕</button>
+            
+            <div id="auth-logged-out">
+                <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: var(--border-blue);">Cloud Sync</div>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Log in to sync your local data across devices.</p>
+                
+                <input type="email" id="auth-email" placeholder="Email Address" style="width: 100%; padding: 12px; margin-bottom: 15px; background: #1e1e1e; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                <input type="password" id="auth-password" placeholder="Password" style="width: 100%; padding: 12px; margin-bottom: 20px; background: #1e1e1e; border: 1px solid #444; color: #fff; border-radius: 6px;">
+                
+                <div id="auth-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 15px; display: none;"></div>
+                
+                <button onclick="window.handleLogin()" style="width: 100%; padding: 12px; background: var(--border-blue); color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">Log In</button>
+                <button onclick="window.handleRegister()" style="width: 100%; padding: 12px; background: transparent; color: var(--border-blue); font-weight: bold; border: 1px solid var(--border-blue); border-radius: 6px; cursor: pointer;">Create Account</button>
+            </div>
+            
+            <div id="auth-logged-in" style="display: none;">
+                <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #22c55e;">Synced to Cloud</div>
+                <p style="font-size: 1rem; color: #fff; margin-bottom: 10px;">Logged in as:</p>
+                <p id="auth-current-user" style="font-weight: bold; color: var(--border-blue); margin-bottom: 30px;">email@example.com</p>
+                
+                <button onclick="window.handleLogout()" style="width: 100%; padding: 12px; background: #ef4444; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">Log Out</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script>
         const firebaseConfig = {
@@ -302,14 +332,20 @@
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const auth = firebase.auth();
         
         window.syncDbToCloud = function(dbObj) {
-            database.ref('omnote_data/master').set(dbObj).catch(e => console.error("Firebase sync error", e));
+            const user = auth.currentUser;
+            if (user) {
+                database.ref('omnote_data/users/' + user.uid + '/data').set(dbObj).catch(e => console.error("Firebase sync error", e));
+            }
         };
         
         window.loadDbFromCloud = async function() {
+            const user = auth.currentUser;
+            if (!user) return null;
             try {
-                const snapshot = await database.ref('omnote_data/master').once('value');
+                const snapshot = await database.ref('omnote_data/users/' + user.uid + '/data').once('value');
                 return snapshot.val();
             } catch (e) {
                 console.error("Firebase load error", e);
