@@ -906,6 +906,12 @@ body::before {
     max-width: 900px;
     margin: 0 auto;
     animation: fadeInUp 0.3s var(--transition-smooth);
+    transition: max-width var(--transition-base), font-size var(--transition-base);
+}
+
+body.sidebar-closed .markdown-body {
+    max-width: 1400px;
+    font-size: 1.15rem;
 }
 .markdown-body h1 {
     font-size: 2.2rem;
