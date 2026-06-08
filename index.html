@@ -309,7 +309,10 @@
             <div id="auth-logged-in" style="display: none;">
                 <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #22c55e;">Synced to Cloud</div>
                 <p style="font-size: 1rem; color: #fff; margin-bottom: 10px;">Logged in as:</p>
-                <p id="auth-current-user" style="font-weight: bold; color: var(--border-blue); margin-bottom: 30px;">email@example.com</p>
+                <p id="auth-current-user" style="font-weight: bold; color: var(--border-blue); margin-bottom: 20px;">email@example.com</p>
+                
+                <button onclick="window.forceUploadLocalData()" style="width: 100%; padding: 10px; background: #3b82f6; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">⬆️ Push Local Data to Cloud</button>
+                <button onclick="window.forceDownloadCloudData()" style="width: 100%; padding: 10px; background: #8b5cf6; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 20px;">⬇️ Pull Cloud Data</button>
                 
                 <button onclick="window.handleLogout()" style="width: 100%; padding: 12px; background: #ef4444; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;">Log Out</button>
             </div>
@@ -334,10 +337,15 @@
         const database = firebase.database();
         const auth = firebase.auth();
         
-        window.syncDbToCloud = function(dbObj) {
+        window.syncDbToCloud = async function(dbObj) {
             const user = auth.currentUser;
             if (user) {
-                database.ref('omnote_data/users/' + user.uid + '/data').set(dbObj).catch(e => console.error("Firebase sync error", e));
+                try {
+                    await database.ref('omnote_data/master/users/' + user.uid + '/data').set(dbObj);
+                } catch(e) {
+                    console.error("Firebase sync error", e);
+                    alert("Firebase Error: " + e.message + "\nYour database rules might be blocking writes.");
+                }
             }
         };
         
@@ -345,7 +353,7 @@
             const user = auth.currentUser;
             if (!user) return null;
             try {
-                const snapshot = await database.ref('omnote_data/users/' + user.uid + '/data').once('value');
+                const snapshot = await database.ref('omnote_data/master/users/' + user.uid + '/data').once('value');
                 return snapshot.val();
             } catch (e) {
                 console.error("Firebase load error", e);
