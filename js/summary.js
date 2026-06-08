@@ -94,8 +94,8 @@ window.explainText = async function () {
     ];
 
     // Check if callGroqAPI is available
-    if (window.callGroqAPI) {
-        const reply = await window.callGroqAPI(messages, false);
+    if (typeof callGroqAPI !== 'undefined') {
+        const reply = await callGroqAPI(messages, false);
         if (reply) {
             contentDiv.innerHTML = reply;
         } else {
@@ -118,8 +118,8 @@ window.addCardFromSelection = async function () {
         { role: "user", content: `Sentence: "${currentSelection}"` }
     ];
 
-    if (window.callGroqAPI) {
-        const reply = await window.callGroqAPI(messages, true);
+    if (typeof callGroqAPI !== 'undefined') {
+        const reply = await callGroqAPI(messages, true);
         if (reply) {
             try {
                 // simple json extraction if possible
