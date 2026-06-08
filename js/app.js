@@ -82,6 +82,25 @@ window.toggleSidebar = function () {
     document.getElementById('sidebar-menu').classList.toggle('active');
 }
 
+window.toggleRightPane = function () {
+    const rightPane = document.getElementById('right-pane');
+    if (rightPane) {
+        rightPane.classList.toggle('collapsed');
+    }
+}
+
+window.toggleFullScreen = function () {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.log(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
+
 window.createNewDocument = function () {
     const docId = generateId();
     const subjectId = db.subjects && db.subjects.length > 0 ? db.subjects[0].id : 's1';
