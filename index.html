@@ -1,311 +1,370 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmNote - Advanced UI</title>
-    
+    <title>OmNote — Intelligent Learning Platform</title>
+    <meta name="description" content="OmNote - Your AI-powered study companion. Upload PDFs, generate study plans, create flashcards, and master any subject.">
+
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
     <!-- Full Screen Login Gatekeeper -->
-    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: var(--bg-color); z-index: 10000; position: fixed; top: 0; left: 0;">
-        <div style="background: var(--panel-bg); width: 400px; max-width: 90vw; border-radius: 12px; padding: 40px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-            <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">OmNote</div>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Sign in to access your cloud workspace.</p>
-            
-            <input type="email" id="auth-email" placeholder="Email Address" style="width: 100%; padding: 12px; margin-bottom: 15px; background: #1e1e1e; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box;">
-            <input type="password" id="auth-password" placeholder="Password" style="width: 100%; padding: 12px; margin-bottom: 20px; background: #1e1e1e; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box;">
-            
-            <div id="auth-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 15px; display: none;"></div>
-            
-            <button onclick="window.handleLogin()" style="width: 100%; padding: 12px; background: var(--border-blue); color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">Log In</button>
-            <button onclick="window.handleRegister()" style="width: 100%; padding: 12px; background: transparent; color: var(--border-blue); font-weight: bold; border: 1px solid var(--border-blue); border-radius: 6px; cursor: pointer;">Create Account</button>
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="login-logo">OmNote</div>
+            <p class="login-subtitle">Sign in to access your cloud workspace.</p>
+
+            <input type="email" id="auth-email" class="login-input" placeholder="Email Address">
+            <input type="password" id="auth-password" class="login-input" placeholder="Password">
+
+            <div id="auth-error"></div>
+
+            <button class="login-btn-primary" onclick="window.handleLogin()">Log In</button>
+            <button class="login-btn-secondary" onclick="window.handleRegister()">Create Account</button>
         </div>
     </div>
 
     <!-- Main App Wrapper -->
     <div id="app-wrapper" style="display: none; height: 100vh; flex-direction: column; width: 100%;">
 
-    <!-- Sidebar Overlay -->
-    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
-    <div id="sidebar-menu">
-        <div class="sidebar-header">
-            <h2>OmNote</h2>
-            <button class="btn-icon" onclick="toggleSidebar()">✕</button>
-        </div>
-        <div class="sidebar-content">
-            <div style="display:flex; gap:10px;">
-                <button class="btn-new-doc" style="flex:1; padding: 10px;" onclick="createNewSubject()">+ New Subject</button>
-                <button class="btn-new-doc" style="flex:1; padding: 10px;" onclick="createNewDocument()">+ New Doc</button>
+        <!-- Sidebar Overlay -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+        <div id="sidebar-menu">
+            <div class="sidebar-header">
+                <h2>OmNote</h2>
+                <button class="btn-icon" onclick="toggleSidebar()">✕</button>
             </div>
-            <div style="margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px;">Your Knowledge Base</div>
-            <div id="document-list">
-                <!-- Populated by app.js -->
-            </div>
-            
-            <div style="margin-top: 40px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px;">Mastery Stats</div>
-            <div class="stat-card">
-                <div>Flashcards Mastered</div>
-                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-active); margin-top: 5px;" id="stat-mastered">0</div>
-            </div>
-            
-            <div style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px;">Study Stats</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="stat-card">
-                    <div style="font-size: 0.75rem;">Today</div>
-                    <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 5px;" id="stat-today">0m</div>
+            <div class="sidebar-content">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-new-doc" style="flex:1; padding: 10px;" onclick="createNewSubject()">+ New
+                        Subject</button>
+                    <button class="btn-new-doc" style="flex:1; padding: 10px;" onclick="createNewDocument()">+ New
+                        Doc</button>
                 </div>
+                <div class="sidebar-section-label" style="margin-top: 30px;">
+                    Your Knowledge Base</div>
+                <div id="document-list">
+                    <!-- Populated by app.js -->
+                </div>
+
+                <div class="sidebar-section-label" style="margin-top: 40px;">
+                    Mastery Stats</div>
                 <div class="stat-card">
-                    <div style="font-size: 0.75rem;">This Week</div>
-                    <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 5px;" id="stat-week">0m</div>
+                    <div>Flashcards Mastered</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; margin-top: 5px; background: linear-gradient(90deg, #06b6d4, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"
+                        id="stat-mastered">0</div>
+                </div>
+
+                <div class="sidebar-section-label" style="margin-top: 20px;">
+                    Study Stats</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="stat-card">
+                        <div style="font-size: 0.75rem;">Today</div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent-cyan); margin-top: 5px;"
+                            id="stat-today">0m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 0.75rem;">This Week</div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent-violet); margin-top: 5px;"
+                            id="stat-week">0m</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="margin-top: 10px;">
+                    <div style="font-size: 0.75rem;">This Month</div>
+                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent-emerald); margin-top: 5px;" id="stat-month">
+                        0m</div>
                 </div>
             </div>
-            <div class="stat-card" style="margin-top: 10px;">
-                <div style="font-size: 0.75rem;">This Month</div>
-                <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 5px;" id="stat-month">0m</div>
+        </div>
+
+        <!-- Topbar -->
+        <div id="topbar">
+            <div class="topbar-left">
+                <button class="btn-icon" onclick="toggleSidebar()"><span style="font-size: 1.1rem;">☰</span></button>
+                <button class="btn-icon" onclick="showHomeView()"><span style="font-size: 1.1rem;">🏠</span></button>
+                <div class="doc-title-group" id="top-doc-title-group" style="margin-left: 8px;">
+                    <div class="doc-title" id="top-doc-title">Untitled Document</div>
+                    <div class="doc-subtitle">OmNote Learning</div>
+                </div>
+            </div>
+
+            <!-- Center: Main Navigation Tabs -->
+            <div class="topbar-center">
+                <div class="main-nav-tabs" id="main-nav-tabs">
+                    <button class="main-nav-tab active" onclick="switchMainTab('study-plan', this)">
+                        <span class="tab-emoji">📋</span> Study Plan
+                    </button>
+                    <button class="main-nav-tab" onclick="switchMainTab('summary', this)">
+                        <span class="tab-emoji">📑</span> Summary
+                    </button>
+                    <button class="main-nav-tab" onclick="switchMainTab('ai-tutor', this)">
+                        <span class="tab-emoji">🤖</span> AI Tutor
+                    </button>
+                    <button class="main-nav-tab" onclick="switchMainTab('review', this)">
+                        <span class="tab-emoji">📚</span> <span id="nav-review-label">Review (0)</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <!-- Upload Button -->
+                <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;"
+                    onchange="handleFileUpload(event)">
+                <button class="btn-upload-top" onclick="document.getElementById('pdf-upload').click()">📎 Upload</button>
+
+                <!-- Pomodoro Timer Widget -->
+                <div class="pomo-widget">
+                    <div class="pomo-ring-wrap" id="pomo-ring-wrap" onclick="toggleTimer()">
+                        <svg viewBox="0 0 36 36">
+                            <defs>
+                                <linearGradient id="pomoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#06b6d4" />
+                                    <stop offset="100%" style="stop-color:#8b5cf6" />
+                                </linearGradient>
+                            </defs>
+                            <circle class="pomo-ring-bg" cx="18" cy="18" r="15.5" />
+                            <circle class="pomo-ring-progress" id="pomo-ring" cx="18" cy="18" r="15.5"
+                                stroke-dasharray="97.39" stroke-dashoffset="0" />
+                        </svg>
+                    </div>
+                    <span class="pomo-time" id="pomo-time" onclick="toggleTimer()">25:00</span>
+                    <button class="pomo-btn" onclick="resetTimer()" title="Reset">🔄</button>
+                    <button class="pomo-btn" onclick="openTimerSettings()" title="Settings">⚙️</button>
+                </div>
+
+                <button class="btn-logout" onclick="window.handleLogout()">Log Out</button>
             </div>
         </div>
-    </div>
 
-    <!-- Topbar -->
-    <div id="topbar">
-        <div class="topbar-left">
-            <button class="btn-icon" onclick="toggleSidebar()"><span style="font-size: 1.2rem;">☰</span> Menu</button>
-            <button class="btn-icon" onclick="showHomeView()" style="margin-left: 10px;"><span style="font-size: 1.2rem;">🏠</span> Home</button>
-            <div class="doc-title-group" id="top-doc-title-group" style="margin-left: 15px;">
-                <div class="doc-title" id="top-doc-title">Untitled Document</div>
-                <div class="doc-subtitle">OmNote Learning</div>
-            </div>
-        </div>
-        
-        <div class="topbar-right">
-            <!-- Explicit Upload Button -->
-            <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;" onchange="handleFileUpload(event)">
-            <button class="btn-upload-top" onclick="document.getElementById('pdf-upload').click()">📎 Upload PDF</button>
-
-            <div class="main-tabs">
-                <div class="tab-item" onclick="switchLeftView('pdf-view', this)">📄 Read PDF</div>
-                <div class="tab-item" onclick="switchLeftView('summary-view', this)">📑 Read Summary</div>
-                <div class="tab-item active" onclick="switchLeftView('notes-view', this)">📝 Notes</div>
-            </div>
-            
-            <div class="pomodoro-container" style="display:flex; align-items:center; gap: 5px; margin-left: 15px; border-left: 1px solid var(--border-color); padding-left: 15px;">
-                <button class="btn-icon" id="btn-timer" onclick="toggleTimer()" style="font-weight: bold; width: 75px; text-align: left; padding: 5px;">▶️ 25:00</button>
-                <button class="btn-icon" onclick="resetTimer()" title="Reset Timer" style="padding: 5px;">🔄</button>
-                <button class="btn-icon" onclick="openTimerSettings()" title="Timer Settings" style="padding: 5px;">⚙️</button>
-            </div>
-
-            <button class="btn-icon" style="color:var(--text-main); font-weight:bold; margin-left: 15px;" id="btn-review-queue" onclick="startReview()">📚 Review Queue (0)</button>
-            <button class="btn-icon" style="margin-left: 15px; color: #ef4444; font-weight: bold;" onclick="window.handleLogout()">Log Out</button>
-        </div>
-    </div>
-
-    <!-- Home View -->
-    <div id="home-view" style="display: none; padding: 40px; overflow-y: auto; height: calc(100vh - 60px); width: 100%; box-sizing: border-box; background: var(--bg-main);">
-        <div style="max-width: 1200px; margin: 0 auto;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;">
+        <!-- Home View -->
+        <div id="home-view" style="display: none;">
+            <div class="home-header">
                 <div>
-                    <h1 style="font-size: 2.5rem; margin-bottom: 10px; font-weight: 800; background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Welcome back.</h1>
-                    <p style="color: var(--text-muted); font-size: 1.1rem;">Ready to master something new today?</p>
+                    <h1 class="home-title">Welcome back.</h1>
+                    <p class="home-subtitle">Ready to master something new today?</p>
                 </div>
-                <div style="display: flex; gap: 15px;">
-                    <button class="btn-action" style="background: #333; color: white;" onclick="window.createNewDocument()">📄 New Document</button>
-                    <button class="btn-action" style="background: var(--bg-purple); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;" onclick="document.getElementById('pdf-upload').click()">📎 Upload PDF</button>
+                <div class="home-actions">
+                    <button class="btn-action" onclick="window.createNewDocument()">📄 New Document</button>
+                    <button class="btn-action primary"
+                        onclick="document.getElementById('pdf-upload').click()">📎 Upload PDF</button>
                 </div>
             </div>
-            
-            <div id="home-subjects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px;">
+
+            <div id="home-subjects-grid">
                 <!-- Dynamically populated subjects and documents -->
             </div>
         </div>
-    </div>
 
-    <!-- Workspace -->
-    <div id="workspace">
-        
-        <!-- LEFT PANE -->
-        <div id="left-pane">
-            
-            <!-- Read PDF View -->
-            <div id="pdf-view" class="left-view-section">
-                <div class="pdf-upload-overlay" id="upload-overlay">
-                    <h2 style="margin-bottom: 5px;">No PDF Uploaded</h2>
-                    <p style="color: var(--text-muted); text-align: center; max-width: 400px;">
-                        Upload a PDF to extract text, generate summaries, and prepare a study plan for this document.
-                    </p>
-                    <button class="btn-upload" style="margin-top: 15px;" onclick="document.getElementById('pdf-upload').click()">Choose PDF</button>
+        <!-- Workspace -->
+        <div id="workspace">
+
+            <!-- LEFT PANE -->
+            <div id="left-pane">
+
+                <!-- Left Pane Sub-tabs -->
+                <div class="left-pane-tabs" id="left-pane-tabs">
+                    <button class="left-tab-item" onclick="switchLeftView('pdf-view', this)">📄 Read PDF</button>
+                    <button class="left-tab-item" onclick="switchLeftView('summary-view', this)">📑 Read Summary</button>
+                    <button class="left-tab-item active" onclick="switchLeftView('notes-view', this)">📝 Notes</button>
                 </div>
-                <iframe id="pdf-iframe"></iframe>
+
+                <!-- Read PDF View -->
+                <div id="pdf-view" class="left-view-section">
+                    <div class="pdf-upload-overlay" id="upload-overlay">
+                        <h2 style="margin-bottom: 5px;">No PDF Uploaded</h2>
+                        <p style="color: var(--text-secondary); text-align: center; max-width: 400px;">
+                            Upload a PDF to extract text, generate summaries, and prepare a study plan for this
+                            document.
+                        </p>
+                        <button class="btn-upload"
+                            onclick="document.getElementById('pdf-upload').click()">Choose PDF</button>
+                    </div>
+                    <iframe id="pdf-iframe"></iframe>
+                </div>
+
+                <!-- Read Summary View -->
+                <div id="summary-view" class="left-view-section">
+                    <div class="summary-header">
+                        <div class="summary-title-bar">
+                            <span
+                                style="font-size: 1.05rem; font-weight: 700; display:flex; align-items:center; gap:8px;">📑
+                                Read Summary</span>
+                            <div class="summary-toggles">
+                                <button class="toggle-btn">Compact</button>
+                                <button class="toggle-btn active">Detailed</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="summary-content" class="markdown-body">
+                        <div style="color: var(--text-muted); margin-top: 50px; text-align: center;">Upload a PDF to
+                            generate a beautiful summary.</div>
+                    </div>
+                </div>
+
+                <!-- Notes View (ACTIVE BY DEFAULT) -->
+                <div id="notes-view" class="left-view-section active" style="padding:40px;">
+                    <input type="text" id="doc-title-input" class="doc-title-editor" placeholder="Document Title"
+                        onchange="updateDocTitle(this.value)">
+                    <div style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 20px;">Use Tab to indent,
+                        Shift+Tab to outdent. Type == for flashcards.</div>
+                    <div id="editor-container"></div>
+                </div>
+
             </div>
 
-            <!-- Read Summary View -->
-            <div id="summary-view" class="left-view-section">
-                <div class="summary-header">
-                    <div class="summary-title-bar">
-                        <span style="font-size: 1.1rem; font-weight: bold; display:flex; align-items:center; gap:8px;">📑 Read Summary</span>
-                        <div class="summary-toggles">
-                            <button class="toggle-btn">Compact</button>
-                            <button class="toggle-btn active">Detailed</button>
+            <!-- RIGHT PANE -->
+            <div id="right-pane">
+
+                <!-- Right Pane Tabs -->
+                <div class="right-tabs">
+                    <button class="right-tab-item active" onclick="switchRightView('quiz-view', this)">❓ Quiz</button>
+                    <button class="right-tab-item" onclick="switchRightView('learn-view', this)">✨ Study Plan</button>
+                    <button class="right-tab-item" onclick="switchRightView('ai-view', this)">🤖 AI Tutor</button>
+                </div>
+
+                <!-- Test Your Knowledge View -->
+                <div id="quiz-view" class="right-view-section active">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">As you read the
+                        summary, answer the following questions:</div>
+                    <div id="quiz-container">
+                        <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">Click "Quiz Me" in
+                            the Study Plan to generate a quiz.</div>
+                    </div>
+                </div>
+
+                <!-- Learn PDF View -->
+                <div id="learn-view" class="right-view-section">
+                    <div id="accordion-container">
+                        <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">Upload a PDF to
+                            generate a study plan.</div>
+                    </div>
+                </div>
+
+                <!-- AI Tutor View -->
+                <div id="ai-view" class="right-view-section">
+                    <div id="ai-chat">
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="message system">Upload a PDF and I can answer questions about it!</div>
+                        </div>
+                        <div class="chat-input-area">
+                            <textarea class="chat-input" id="chat-input" rows="2"
+                                placeholder="Ask a question..."></textarea>
+                            <button class="chat-send-btn" onclick="sendChatMessage()">Send Message</button>
                         </div>
                     </div>
                 </div>
-                <div id="summary-content" class="markdown-body">
-                    <div style="color: var(--text-muted); margin-top: 50px; text-align: center;">Upload a PDF to generate a beautiful summary.</div>
-                </div>
-            </div>
-            
-            <!-- Notes View (ACTIVE BY DEFAULT) -->
-            <div id="notes-view" class="left-view-section active" style="padding:40px;">
-                <input type="text" id="doc-title-input" class="doc-title-editor" placeholder="Document Title" onchange="updateDocTitle(this.value)">
-                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;">Use Tab to indent, Shift+Tab to outdent. Type == for flashcards.</div>
-                <div id="editor-container"></div>
-            </div>
 
+            </div>
         </div>
 
-        <!-- RIGHT PANE -->
-        <div id="right-pane">
-            
-            <!-- Right Pane Tabs -->
-            <div class="right-tabs">
-                <div class="right-tab-item active" onclick="switchRightView('quiz-view', this)">❓ Test Your Knowledge</div>
-                <div class="right-tab-item" onclick="switchRightView('learn-view', this)">✨ Study Plan</div>
-                <div class="right-tab-item" onclick="switchRightView('ai-view', this)">🤖 AI Tutor</div>
-            </div>
+        <!-- Review Modal -->
+        <div id="review-modal" class="modal">
+            <div class="review-modal-content">
 
-            <!-- Test Your Knowledge View -->
-            <div id="quiz-view" class="right-view-section active">
-                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">As you read the summary, answer the following questions:</div>
-                <div id="quiz-container">
-                    <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">Click "Quiz Me" in the Study Plan to generate a quiz.</div>
-                </div>
-            </div>
-
-            <!-- Learn PDF View -->
-            <div id="learn-view" class="right-view-section">
-                <div id="accordion-container">
-                    <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">Upload a PDF to generate a study plan.</div>
-                </div>
-            </div>
-
-            <!-- AI Tutor View -->
-            <div id="ai-view" class="right-view-section">
-                <div id="ai-chat">
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="message system">Upload a PDF and I can answer questions about it!</div>
+                <!-- Top Pill Header -->
+                <div style="display:flex; justify-content: center; margin-bottom: 20px; position:relative;">
+                    <div class="review-pill">
+                        <span id="review-count">1</span> Flashcards in
+                        <span style="border: 1px solid var(--border-medium); border-radius: 4px; padding: 2px 8px; font-size: 0.8rem;">Active
+                            Document</span>
                     </div>
-                    <div style="display:flex; flex-direction: column; gap:10px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                        <textarea class="chat-input" id="chat-input" rows="2" placeholder="Ask a question..."></textarea>
-                        <button onclick="sendChatMessage()" style="background:var(--bg-purple); color:white; border:none; border-radius:6px; padding:10px; cursor:pointer; font-weight:bold;">Send Message</button>
-                    </div>
+                    <button class="review-close-btn" onclick="closeModal('review-modal')">✕</button>
                 </div>
-            </div>
 
-        </div>
-    </div>
+                <!-- Main Content Area -->
+                <div style="padding: 20px; min-height: 250px;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 10px;">📄 Uploaded Files > <span
+                            id="review-doc-title">Document</span></div>
+                    <div style="font-weight: 700; margin-bottom: 10px;">Study Topic</div>
+                    <div style="display:flex; gap: 10px; margin-bottom: 20px;">
+                        <div style="color: var(--text-dim); font-size: 1.2rem;">•</div>
+                        <div style="line-height: 1.6;">
+                            <span id="card-front" style="font-size: 1.1rem;">Question</span>
+                            <span id="card-back"
+                                style="font-size: 1.1rem; color: var(--text-secondary); margin-left: 5px; display:none;"> ➔ Answer</span>
+                        </div>
+                    </div>
 
-    <!-- Review Modal -->
-    <div id="review-modal" class="modal" style="background: rgba(15,15,15,0.9);">
-        <div class="modal-content" style="background: #2b2b2b; width: 800px; max-width: 95vw; height: auto; border-radius: 12px; padding: 20px; color: #fff; border: 1px solid #444;">
-            
-            <!-- Top Pill Header -->
-            <div style="display:flex; justify-content: center; margin-bottom: 20px; position:relative;">
-                <div style="background: #1e1e1e; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display:flex; align-items:center; gap:8px;">
-                    <span id="review-count">1</span> Flashcards in 
-                    <span style="border: 1px solid #444; border-radius: 4px; padding: 2px 6px;">Active Document</span>
-                </div>
-                <button onclick="closeModal('review-modal')" style="position:absolute; right:0; background:transparent; border:none; color:#888; cursor:pointer; font-size: 1.2rem;">✕</button>
-            </div>
-            
-            <!-- Main Content Area -->
-            <div style="padding: 20px; min-height: 250px;">
-                <div style="color: #888; font-size: 0.8rem; margin-bottom: 10px;">📄 Uploaded Files > <span id="review-doc-title">Document</span></div>
-                <div style="font-weight: bold; margin-bottom: 10px;">Study Topic</div>
-                <div style="display:flex; gap: 10px; margin-bottom: 20px;">
-                    <div style="color: #666; font-size: 1.2rem;">•</div>
-                    <div style="line-height: 1.5;">
-                        <span id="card-front" style="font-size: 1.1rem;">Question</span>
-                        <span id="card-back" style="font-size: 1.1rem; color: #aaa; margin-left: 5px; display:none;"> ➔ Answer</span>
-                    </div>
-                </div>
-                
-                <button class="btn-show-answer" id="btn-show-answer" onclick="showAnswer()" style="width:100%; margin-top:20px; background:#4f46e5; border:none; padding:12px; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Show Answer</button>
-                
-                <!-- Sources Block -->
-                <div id="card-sources-block" style="display:none; background: #0b1c31; border-radius: 8px; overflow: hidden; margin-top: 30px;">
-                    <div style="display:flex; justify-content: space-between; padding: 10px 15px; border-bottom: 1px solid #1a365d; font-size: 0.85rem; color: #63b3ed; font-weight: bold;">
-                        Sources
-                    </div>
-                    <div style="padding: 15px; background: #0d2745;">
-                        <div style="border-left: 3px solid #e2e8f0; padding-left: 10px; font-size: 0.9rem; color: #e2e8f0; line-height: 1.5;" id="card-source-text">
-                            Source text here...
+                    <button class="btn-show-answer" id="btn-show-answer" onclick="showAnswer()">Show Answer</button>
+
+                    <!-- Sources Block -->
+                    <div id="card-sources-block" class="sources-block" style="display:none;">
+                        <div class="sources-header">Sources</div>
+                        <div class="sources-body">
+                            <div class="sources-quote" id="card-source-text">
+                                Source text here...
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Bottom Actions -->
-            <div class="srs-buttons" id="srs-buttons" style="display:none; gap: 10px; margin-top: 20px; width: 100%;">
-                <button onclick="submitReview('disable')" style="flex:1; background: #3a3a3a; color: #fff; border:1px solid #444; border-radius: 8px; padding: 15px; cursor:pointer; font-weight:bold; display:flex; flex-direction:column; align-items:center; gap:5px; transition: background 0.2s;">
-                    <span style="font-size:1.5rem;">🗑️</span> Disable Card
-                </button>
-                <button onclick="submitReview('forgot')" style="flex:1; background: #3a3a3a; color: #fff; border:1px solid #444; border-radius: 8px; padding: 15px; cursor:pointer; font-weight:bold; display:flex; flex-direction:column; align-items:center; gap:5px; transition: background 0.2s;">
-                    <span style="font-size:1.5rem; color:#f87171;">✕</span> Forgot
-                </button>
-                <button onclick="submitReview('easy')" style="flex:1; background: #3a3a3a; color: #fff; border:1px solid #444; border-radius: 8px; padding: 15px; cursor:pointer; font-weight:bold; display:flex; flex-direction:column; align-items:center; gap:5px; transition: background 0.2s;">
-                    <span style="font-size:1.5rem;">😄</span> Remembered
-                </button>
-            </div>
-            
-        </div>
-    </div>
+                <!-- Bottom Actions -->
+                <div class="srs-buttons" id="srs-buttons" style="display:none;">
+                    <button class="srs-action-btn" onclick="submitReview('disable')">
+                        <span class="srs-emoji">🗑️</span> Disable Card
+                    </button>
+                    <button class="srs-action-btn" onclick="submitReview('forgot')">
+                        <span class="srs-emoji" style="color: var(--accent-rose);">✕</span> Forgot
+                    </button>
+                    <button class="srs-action-btn" onclick="submitReview('easy')">
+                        <span class="srs-emoji">😄</span> Remembered
+                    </button>
+                </div>
 
-    <!-- Exam Modal -->
-    <div id="exam-modal" class="modal" style="background: rgba(15,15,15,0.9);">
-        <div class="modal-content" style="background: #2b2b2b; width: 900px; max-width: 95vw; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; color: #fff; border: 1px solid #444; position: relative;">
-            <button onclick="closeModal('exam-modal')" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:#888; cursor:pointer; font-size: 1.5rem;">✕</button>
-            <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #ef4444; text-align: center;">Hard Exam Simulation</div>
-            <div id="exam-modal-content">
-                <!-- Exam questions rendered here -->
             </div>
-            <button onclick="closeModal('exam-modal')" style="width:100%; margin-top:20px; background:#ef4444; border:none; padding:12px; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Finish Exam</button>
         </div>
-    </div>
 
-    <!-- Image Viewer Modal -->
-    <div id="image-viewer-modal" class="modal" style="background: rgba(15,15,15,0.9);">
-        <div class="modal-content" style="background: #1e1e1e; width: 1000px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 20px; color: #fff; border: 1px solid #444; position: relative;">
-            <button onclick="closeModal('image-viewer-modal')" style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#888; cursor:pointer; font-size: 1.5rem;">✕</button>
-            <div id="image-viewer-content" style="margin-top: 20px;">
-                <!-- Images rendered here -->
+        <!-- Exam Modal -->
+        <div id="exam-modal" class="modal">
+            <div class="exam-modal-content">
+                <button class="exam-close-btn" onclick="closeModal('exam-modal')">✕</button>
+                <div class="exam-title">Hard Exam Simulation</div>
+                <div id="exam-modal-content">
+                    <!-- Exam questions rendered here -->
+                </div>
+                <button class="exam-finish-btn" onclick="closeModal('exam-modal')">Finish Exam</button>
             </div>
         </div>
-    </div>
 
-    <!-- Popover Component -->
-    <div id="selection-popover" class="custom-popover">
-        <div class="popover-sidebar">
-            <button class="popover-btn active" onclick="explainText()"><span style="margin-right:8px;">💡</span>Explain</button>
-            <button class="popover-btn" onclick="addCardFromSelection()"><span style="margin-right:8px;">➕</span>Add Card</button>
-            <button class="popover-btn" onclick="showImageForSelection()"><span style="margin-right:8px;">🖼️</span>Show Image</button>
-        </div>
-        <div class="popover-main">
-            <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 15px;">What the sentence means</div>
-            <div id="popover-content" style="font-size: 0.85rem; line-height: 1.5; color: var(--text-main);">
-                <div class="loader">Loading explanation...</div>
+        <!-- Image Viewer Modal -->
+        <div id="image-viewer-modal" class="modal">
+            <div class="image-modal-content">
+                <button class="exam-close-btn" onclick="closeModal('image-viewer-modal')">✕</button>
+                <div id="image-viewer-content" style="margin-top: 20px;">
+                    <!-- Images rendered here -->
+                </div>
             </div>
-            <button class="btn-copy" onclick="copyExplanation()">Copy Explanation</button>
         </div>
-    </div>
+
+        <!-- Popover Component -->
+        <div id="selection-popover" class="custom-popover">
+            <div class="popover-sidebar">
+                <button class="popover-btn active" onclick="explainText()"><span
+                        style="margin-right:8px;">💡</span>Explain</button>
+                <button class="popover-btn" onclick="addCardFromSelection()"><span style="margin-right:8px;">➕</span>Add
+                    Card</button>
+                <button class="popover-btn" onclick="showImageForSelection()"><span
+                        style="margin-right:8px;">🖼️</span>Show Image</button>
+            </div>
+            <div class="popover-main">
+                <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 15px;">What the sentence means</div>
+                <div id="popover-content" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary);">
+                    <div class="loader">Loading explanation...</div>
+                </div>
+                <button class="btn-copy" onclick="copyExplanation()">Copy Explanation</button>
+            </div>
+        </div>
 
     </div> <!-- End of app-wrapper -->
 
@@ -326,20 +385,20 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const auth = firebase.auth();
-        
-        window.syncDbToCloud = async function(dbObj) {
+
+        window.syncDbToCloud = async function (dbObj) {
             const user = auth.currentUser;
             if (user) {
                 try {
                     await database.ref('omnote_data/master/users/' + user.uid + '/data').set(dbObj);
-                } catch(e) {
+                } catch (e) {
                     console.error("Firebase sync error", e);
                     alert("Firebase Error: " + e.message + "\nYour database rules might be blocking writes.");
                 }
             }
         };
-        
-        window.loadDbFromCloud = async function() {
+
+        window.loadDbFromCloud = async function () {
             const user = auth.currentUser;
             if (!user) return null;
             try {
@@ -361,4 +420,5 @@
     <script src="js/timer.js"></script>
 
 </body>
+
 </html>
