@@ -442,3 +442,33 @@ window.handleLogout = async function() {
     initApp(null);
     closeModal('auth-modal');
 }
+
+window.forceUploadLocalData = function() {
+    const localData = localStorage.getItem('omnote_db_v2');
+    if (localData) {
+        if (confirm("This will overwrite your cloud data with your local computer's data. Are you sure?")) {
+            db = JSON.parse(localData);
+            saveDb(); // pushes to cloud because user is logged in
+            if (window.refreshAppUI) window.refreshAppUI();
+            alert("Successfully pushed local data to the cloud!");
+            closeModal('auth-modal');
+        }
+    } else {
+        alert("No local data found on this device.");
+    }
+}
+
+window.forceDownloadCloudData = async function() {
+    if (confirm("This will overwrite your local data with the cloud data. Are you sure?")) {
+        const cloudDb = await window.loadDbFromCloud();
+        if (cloudDb) {
+            db = cloudDb;
+            localStorage.setItem('omnote_db_v2', JSON.stringify(db));
+            if (window.refreshAppUI) window.refreshAppUI();
+            alert("Successfully pulled cloud data!");
+            closeModal('auth-modal');
+        } else {
+            alert("No cloud data found.");
+        }
+    }
+}
