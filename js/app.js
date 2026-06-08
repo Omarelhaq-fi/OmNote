@@ -9,29 +9,39 @@ let db = {
 let activeDocId = null;
 
 async function initApp(user) {
+    if (!user) {
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('app-wrapper').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-wrapper').style.display = 'flex';
+
     let cloudDb = null;
-    if (user && window.loadDbFromCloud) {
+    if (window.loadDbFromCloud) {
         cloudDb = await window.loadDbFromCloud();
     }
     
     if (cloudDb) {
         db = cloudDb;
-        // activeDocId left null by default to show home screen
     } else {
-        const saved = localStorage.getItem('omnote_db_v2');
-        if (saved) {
-            db = JSON.parse(saved);
-        } else {
-            const docId = generateId();
-            const defaultSubject = 's1';
-            db.documents.push({ id: docId, title: 'Welcome to OmNote', created: Date.now(), pdfContextText: "", sections: [], subjectId: defaultSubject });
-            
-            if (window.addRem) {
-                window.addRem(docId, "Welcome to OmNote! Your unified learning environment.", 0);
-                window.addRem(docId, "Create flashcards instantly using == syntax.", 0);
-            }
-            saveDb();
+        const docId = generateId();
+        const defaultSubject = 's1';
+        db.documents = [];
+        db.rems = [];
+        db.flashcardsQueue = [];
+        db.sections = [];
+        db.subjects = [{ id: 's1', name: 'General' }];
+        db.studyStats = {};
+        
+        db.documents.push({ id: docId, title: 'Welcome to OmNote', created: Date.now(), pdfContextText: "", sections: [], subjectId: defaultSubject });
+        
+        if (window.addRem) {
+            window.addRem(docId, "Welcome to OmNote! Your unified learning environment.", 0);
+            window.addRem(docId, "Create flashcards instantly using == syntax.", 0);
         }
+        saveDb();
     }
     
     // Ensure backwards compatibility
@@ -57,7 +67,6 @@ async function initApp(user) {
 }
 
 function saveDb() {
-    localStorage.setItem('omnote_db_v2', JSON.stringify(db));
     if (window.firebase && firebase.auth().currentUser && window.syncDbToCloud) {
         window.syncDbToCloud(db);
     }
@@ -362,12 +371,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const unsubscribe = firebase.auth().onAuthStateChanged(user => {
             unsubscribe();
             initApp(user);
-            updateAuthUI(user);
         });
         
         // Listen for subsequent changes to update UI
         firebase.auth().onAuthStateChanged(user => {
-            updateAuthUI(user);
+            initApp(user);
         });
     } else {
         initApp(null);
@@ -379,23 +387,7 @@ window.openAuthModal = function() {
     window.openModal('auth-modal');
 }
 
-function updateAuthUI(user) {
-    const btn = document.getElementById('btn-auth-top');
-    if (btn) {
-        btn.innerText = user ? "👤 Account" : "👤 Login / Register";
-        btn.style.color = user ? "#22c55e" : "var(--border-blue)";
-    }
-    
-    if (user) {
-        document.getElementById('auth-logged-out').style.display = 'none';
-        document.getElementById('auth-logged-in').style.display = 'block';
-        document.getElementById('auth-current-user').innerText = user.email;
-    } else {
-        document.getElementById('auth-logged-out').style.display = 'block';
-        document.getElementById('auth-logged-in').style.display = 'none';
-    }
-}
-
+// Auth Logic
 window.handleLogin = async function() {
     const email = document.getElementById('auth-email').value;
     const pass = document.getElementById('auth-password').value;
@@ -404,9 +396,7 @@ window.handleLogin = async function() {
     
     try {
         await firebase.auth().signInWithEmailAndPassword(email, pass);
-        // Reload app with new user data
         initApp(firebase.auth().currentUser);
-        closeModal('auth-modal');
     } catch(e) {
         err.innerText = e.message;
         err.style.display = 'block';
@@ -421,15 +411,14 @@ window.handleRegister = async function() {
     
     try {
         const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
-        // Migration: If they have local data, immediately sync it to their new cloud account!
+        // Migration logic
         const localData = localStorage.getItem('omnote_db_v2');
         if (localData) {
             db = JSON.parse(localData);
-            saveDb(); // This will now sync to cloud since they are logged in!
+            saveDb();
         }
-        
-        closeModal('auth-modal');
-        alert("Account created! Your local data has been migrated to the cloud.");
+        initApp(firebase.auth().currentUser);
+        alert("Account created!");
     } catch(e) {
         err.innerText = e.message;
         err.style.display = 'block';
@@ -438,37 +427,5 @@ window.handleRegister = async function() {
 
 window.handleLogout = async function() {
     await firebase.auth().signOut();
-    // Re-init as local only
     initApp(null);
-    closeModal('auth-modal');
-}
-
-window.forceUploadLocalData = function() {
-    const localData = localStorage.getItem('omnote_db_v2');
-    if (localData) {
-        if (confirm("This will overwrite your cloud data with your local computer's data. Are you sure?")) {
-            db = JSON.parse(localData);
-            saveDb(); // pushes to cloud because user is logged in
-            if (window.refreshAppUI) window.refreshAppUI();
-            alert("Successfully pushed local data to the cloud!");
-            closeModal('auth-modal');
-        }
-    } else {
-        alert("No local data found on this device.");
-    }
-}
-
-window.forceDownloadCloudData = async function() {
-    if (confirm("This will overwrite your local data with the cloud data. Are you sure?")) {
-        const cloudDb = await window.loadDbFromCloud();
-        if (cloudDb) {
-            db = cloudDb;
-            localStorage.setItem('omnote_db_v2', JSON.stringify(db));
-            if (window.refreshAppUI) window.refreshAppUI();
-            alert("Successfully pulled cloud data!");
-            closeModal('auth-modal');
-        } else {
-            alert("No cloud data found.");
-        }
-    }
 }
