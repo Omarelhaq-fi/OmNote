@@ -999,6 +999,15 @@ body::before {
     display: flex;
     flex-direction: column;
     border-left: 1px solid var(--border-subtle);
+    transition: min-width var(--transition-base), max-width var(--transition-base), flex var(--transition-base), border var(--transition-base);
+}
+
+#right-pane.collapsed {
+    flex: 0;
+    min-width: 0;
+    max-width: 0;
+    border-left: none;
+    overflow: hidden;
 }
 
 .right-tabs {
