@@ -1,227 +1,340 @@
-// Editor & SRS Logic
+// Editor, Rem, Flashcard & SRS Review Logic
 
-function getRemsForDoc(docId) {
-    return db.rems.filter(r => r.docId === docId).sort((a, b) => a.order - b.order);
-}
+// ============================================================
+// ADD REM — Core function to add a rem (note/flashcard) to the db
+// ============================================================
+window.addRem = function (docId, text, indent, parentId, sourceText) {
+    const id = Math.random().toString(36).substr(2, 9);
+    const isFlashcard = text.includes('==');
 
-window.addRem = function(docId, content, level, afterOrder = null, source = "") {
-    const order = afterOrder !== null ? afterOrder + 0.5 : db.rems.length; 
+    let front = '';
+    let back = '';
+    if (isFlashcard) {
+        const parts = text.split('==');
+        front = parts[0].trim();
+        back = parts.slice(1).join('==').trim();
+    }
+
     const rem = {
-        id: generateId(),
-        docId,
-        content,
-        level,
-        order,
-        isFlashcard: false,
-        cardFront: '',
-        cardBack: '',
-        cardSource: source,
-        nextReview: 0,
+        id: id,
+        docId: docId,
+        text: text,
+        indent: indent || 0,
+        parentId: parentId || null,
+        isFlashcard: isFlashcard,
+        front: front,
+        back: back,
+        sourceText: sourceText || '',
+        ease: 2.5,
         interval: 0,
-        ease: 2.5
+        nextReview: isFlashcard ? Date.now() : 0,
+        created: Date.now()
     };
-    parseFlashcard(rem);
+
     db.rems.push(rem);
-    // Normalize orders
-    const docRems = getRemsForDoc(docId);
-    docRems.forEach((r, idx) => r.order = idx);
     return rem;
-}
+};
 
-function parseFlashcard(rem) {
-    const separatorIdx = rem.content.indexOf('==');
-    if (separatorIdx !== -1) {
-        rem.isFlashcard = true;
-        rem.cardFront = rem.content.substring(0, separatorIdx).trim();
-        rem.cardBack = rem.content.substring(separatorIdx + 2).trim();
-        if (rem.nextReview === 0) rem.nextReview = Date.now();
-    } else {
-        rem.isFlashcard = false;
-    }
-}
-
-window.renderRems = function() {
+// ============================================================
+// RENDER REMS — Renders the outliner-style editor in the notes view
+// ============================================================
+window.renderRems = function () {
     const container = document.getElementById('editor-container');
-    if(!container) return;
+    if (!container || !activeDocId) return;
+
+    const docRems = db.rems.filter(r => r.docId === activeDocId);
     container.innerHTML = '';
-    if (!activeDocId) return;
-    
-    const docRems = getRemsForDoc(activeDocId);
-    
-    docRems.forEach((rem, index) => {
-        const remDiv = document.createElement('div');
-        remDiv.className = 'rem';
-        remDiv.style.marginLeft = `${rem.level * 30}px`;
-        
-        const bullet = document.createElement('div');
-        bullet.className = 'rem-bullet';
-        
-        const content = document.createElement('div');
-        content.className = 'rem-content';
-        content.contentEditable = true;
-        content.setAttribute('placeholder', 'Type a rem...');
-        
-        if (rem.isFlashcard) {
-            content.innerHTML = rem.cardFront + ' <span class="flashcard-cloze">==</span> ' + rem.cardBack;
-        } else {
-            content.innerText = rem.content;
-        }
 
-        content.onkeydown = (e) => handleRemKeyDown(e, rem, index, content);
-        content.onblur = (e) => {
-            const newContent = content.innerText.replace(/\n/g, ''); 
-            if (rem.content !== newContent) {
-                rem.content = newContent;
-                parseFlashcard(rem);
-                saveDb();
-                if (rem.content.includes('==')) window.renderRems(); 
-            }
-        };
-
-        remDiv.appendChild(bullet);
-        remDiv.appendChild(content);
-        container.appendChild(remDiv);
-    });
-}
-
-function handleRemKeyDown(e, rem, index, contentDiv) {
-    const docRems = getRemsForDoc(activeDocId);
-    
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        rem.content = contentDiv.innerText;
-        parseFlashcard(rem);
-        window.addRem(activeDocId, "", rem.level, rem.order);
-        saveDb();
+    if (docRems.length === 0) {
+        // Add a blank rem so the editor isn't empty
+        window.addRem(activeDocId, '', 0);
+        if (typeof saveDb === 'function') saveDb();
         window.renderRems();
-        focusRem(index + 1);
-    } 
-    else if (e.key === 'Tab') {
-        e.preventDefault();
-        if (e.shiftKey) {
-            if (rem.level > 0) {
-                rem.level--;
-                saveDb();
-                window.renderRems();
-                focusRem(index);
-            }
-        } else {
-            if (index > 0 && rem.level <= docRems[index-1].level) {
-                rem.level++;
-                saveDb();
-                window.renderRems();
-                focusRem(index);
-            }
-        }
-    }
-    else if (e.key === 'Backspace' && contentDiv.innerText === '') {
-        e.preventDefault();
-        if (docRems.length > 1) {
-            db.rems = db.rems.filter(r => r.id !== rem.id);
-            saveDb();
-            window.renderRems();
-            focusRem(index > 0 ? index - 1 : 0);
-        }
-    }
-    else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (index > 0) focusRem(index - 1);
-    }
-    else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (index < docRems.length - 1) focusRem(index + 1);
-    }
-}
-
-function focusRem(index) {
-    setTimeout(() => {
-        const contents = document.querySelectorAll('.rem-content');
-        if (contents[index]) {
-            contents[index].focus();
-            const range = document.createRange();
-            const sel = window.getSelection();
-            range.selectNodeContents(contents[index]);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
-    }, 10);
-}
-
-// --- SRS REVIEW MODAL ---
-let currentReviewCard = null;
-
-window.startReview = function() {
-    updateSRSQueue();
-    const now = Date.now();
-    const reviewQueue = db.rems.filter(r => r.isFlashcard && r.nextReview <= now && r.docId === activeDocId);
-    
-    if (reviewQueue.length === 0) {
-        alert("You are all caught up for this document!");
         return;
     }
-    
-    openModal('review-modal');
-    currentReviewCard = reviewQueue[0];
-    document.getElementById('review-count').innerText = reviewQueue.length;
-    const doc = db.documents.find(d => d.id === currentReviewCard.docId);
-    if (document.getElementById('review-doc-title')) {
-        document.getElementById('review-doc-title').innerText = doc ? doc.title : "Document";
+
+    docRems.forEach((rem, idx) => {
+        const row = document.createElement('div');
+        row.className = 'rem-row';
+        row.style.paddingLeft = (rem.indent * 24) + 'px';
+        row.setAttribute('data-rem-id', rem.id);
+        row.style.display = 'flex';
+        row.style.alignItems = 'flex-start';
+        row.style.gap = '6px';
+        row.style.marginBottom = '2px';
+        row.style.position = 'relative';
+        row.style.animation = 'fadeIn 0.15s ease';
+
+        // Bullet
+        const bullet = document.createElement('div');
+        bullet.style.width = '6px';
+        bullet.style.height = '6px';
+        bullet.style.borderRadius = '50%';
+        bullet.style.marginTop = '10px';
+        bullet.style.flexShrink = '0';
+        bullet.style.transition = 'all 0.2s';
+
+        if (rem.isFlashcard) {
+            bullet.style.background = 'var(--accent-amber)';
+            bullet.style.boxShadow = '0 0 6px rgba(245,158,11,0.4)';
+        } else {
+            bullet.style.background = 'var(--text-dim)';
+        }
+
+        // Input
+        const input = document.createElement('div');
+        input.contentEditable = true;
+        input.className = 'rem-input';
+        input.style.flex = '1';
+        input.style.background = 'transparent';
+        input.style.border = 'none';
+        input.style.color = 'var(--text-primary)';
+        input.style.outline = 'none';
+        input.style.fontFamily = 'inherit';
+        input.style.fontSize = '0.95rem';
+        input.style.lineHeight = '1.6';
+        input.style.padding = '4px 8px';
+        input.style.borderRadius = '4px';
+        input.style.transition = 'background 0.2s';
+        input.style.minHeight = '28px';
+        input.style.wordBreak = 'break-word';
+
+        // Render flashcard text with highlighting
+        if (rem.isFlashcard && rem.front && rem.back) {
+            input.innerHTML = `<span style="color: var(--text-primary)">${escapeHtml(rem.front)}</span><span style="color: var(--accent-amber); font-weight: 600;"> == </span><span style="color: var(--accent-cyan)">${escapeHtml(rem.back)}</span>`;
+        } else {
+            input.textContent = rem.text;
+        }
+
+        // Focus styling
+        input.addEventListener('focus', () => {
+            input.style.background = 'rgba(255,255,255,0.03)';
+            input.textContent = rem.text; // switch to plain text on edit
+        });
+
+        input.addEventListener('blur', () => {
+            input.style.background = 'transparent';
+            const newText = input.textContent || input.innerText;
+            if (newText !== rem.text) {
+                rem.text = newText;
+                rem.isFlashcard = newText.includes('==');
+                if (rem.isFlashcard) {
+                    const parts = newText.split('==');
+                    rem.front = parts[0].trim();
+                    rem.back = parts.slice(1).join('==').trim();
+                    if (!rem.nextReview || rem.nextReview === 0) {
+                        rem.nextReview = Date.now();
+                    }
+                    bullet.style.background = 'var(--accent-amber)';
+                    bullet.style.boxShadow = '0 0 6px rgba(245,158,11,0.4)';
+                } else {
+                    rem.front = '';
+                    rem.back = '';
+                    bullet.style.background = 'var(--text-dim)';
+                    bullet.style.boxShadow = 'none';
+                }
+                if (typeof saveDb === 'function') saveDb();
+                if (typeof updateSRSQueue === 'function') updateSRSQueue();
+            }
+            // Re-render flashcard highlighting
+            if (rem.isFlashcard && rem.front && rem.back) {
+                input.innerHTML = `<span style="color: var(--text-primary)">${escapeHtml(rem.front)}</span><span style="color: var(--accent-amber); font-weight: 600;"> == </span><span style="color: var(--accent-cyan)">${escapeHtml(rem.back)}</span>`;
+            }
+        });
+
+        // Keyboard: Enter to add new rem, Tab/Shift+Tab for indent
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const newRem = window.addRem(activeDocId, '', rem.indent);
+                // Insert after current rem
+                const currentIdx = db.rems.indexOf(rem);
+                const newRemObj = db.rems.pop(); // remove from end
+                db.rems.splice(currentIdx + 1, 0, newRemObj); // insert after current
+                if (typeof saveDb === 'function') saveDb();
+                window.renderRems();
+                // Focus on new rem
+                setTimeout(() => {
+                    const newRow = document.querySelector(`[data-rem-id="${newRem.id}"] .rem-input`);
+                    if (newRow) newRow.focus();
+                }, 50);
+            }
+
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    rem.indent = Math.max(0, rem.indent - 1);
+                } else {
+                    rem.indent = Math.min(5, rem.indent + 1);
+                }
+                if (typeof saveDb === 'function') saveDb();
+                window.renderRems();
+            }
+
+            if (e.key === 'Backspace' && (input.textContent || input.innerText).trim() === '') {
+                e.preventDefault();
+                if (docRems.length > 1) {
+                    db.rems = db.rems.filter(r => r.id !== rem.id);
+                    if (typeof saveDb === 'function') saveDb();
+                    window.renderRems();
+                    // Focus previous rem
+                    const prevIdx = Math.max(0, idx - 1);
+                    setTimeout(() => {
+                        const inputs = container.querySelectorAll('.rem-input');
+                        if (inputs[prevIdx]) inputs[prevIdx].focus();
+                    }, 50);
+                }
+            }
+        });
+
+        // Delete button (visible on hover)
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '×';
+        delBtn.style.background = 'transparent';
+        delBtn.style.border = 'none';
+        delBtn.style.color = 'var(--text-dim)';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.fontSize = '1rem';
+        delBtn.style.padding = '4px 6px';
+        delBtn.style.borderRadius = '4px';
+        delBtn.style.opacity = '0';
+        delBtn.style.transition = 'all 0.2s';
+
+        row.addEventListener('mouseenter', () => { delBtn.style.opacity = '1'; });
+        row.addEventListener('mouseleave', () => { delBtn.style.opacity = '0'; });
+
+        delBtn.addEventListener('click', () => {
+            if (docRems.length > 1) {
+                db.rems = db.rems.filter(r => r.id !== rem.id);
+                if (typeof saveDb === 'function') saveDb();
+                if (typeof updateSRSQueue === 'function') updateSRSQueue();
+                window.renderRems();
+            }
+        });
+
+        row.appendChild(bullet);
+        row.appendChild(input);
+        row.appendChild(delBtn);
+        container.appendChild(row);
+    });
+};
+
+// ============================================================
+// SRS REVIEW — Spaced repetition review session
+// ============================================================
+let reviewQueue = [];
+let currentReviewIdx = 0;
+
+window.startReview = function () {
+    if (!activeDocId) return;
+    const now = Date.now();
+    reviewQueue = db.rems.filter(r => r.isFlashcard && r.nextReview <= now && r.docId === activeDocId);
+
+    if (reviewQueue.length === 0) {
+        alert("No flashcards due for review! 🎉");
+        return;
     }
 
-    document.getElementById('card-front').innerText = currentReviewCard.cardFront;
-    document.getElementById('card-back').innerText = " ➔ " + currentReviewCard.cardBack;
-    document.getElementById('card-back').style.display = 'none';
-    
+    currentReviewIdx = 0;
+    showReviewCard();
+    window.openModal('review-modal');
+};
+
+function showReviewCard() {
+    if (currentReviewIdx >= reviewQueue.length) {
+        window.closeModal('review-modal');
+        alert("Review session complete! 🎉");
+        if (typeof refreshAppUI === 'function') refreshAppUI();
+        return;
+    }
+
+    const card = reviewQueue[currentReviewIdx];
+    const doc = db.documents.find(d => d.id === card.docId);
+
+    document.getElementById('review-count').textContent = `${currentReviewIdx + 1} / ${reviewQueue.length}`;
+    document.getElementById('review-doc-title').textContent = doc ? doc.title : 'Document';
+    document.getElementById('card-front').textContent = card.front;
+
+    const backEl = document.getElementById('card-back');
+    backEl.textContent = ' ➔ ' + card.back;
+    backEl.style.display = 'none';
+
     document.getElementById('btn-show-answer').style.display = 'block';
     document.getElementById('srs-buttons').style.display = 'none';
-    if(document.getElementById('card-sources-block')) {
-        document.getElementById('card-sources-block').style.display = 'none';
+
+    // Show source if available
+    const sourcesBlock = document.getElementById('card-sources-block');
+    const sourceText = document.getElementById('card-source-text');
+    if (card.sourceText && card.sourceText.trim()) {
+        sourceText.textContent = card.sourceText;
+        sourcesBlock.style.display = 'none'; // Hidden until answer shown
+    } else {
+        sourcesBlock.style.display = 'none';
     }
 }
 
-window.showAnswer = function() {
+window.showAnswer = function () {
     document.getElementById('card-back').style.display = 'inline';
     document.getElementById('btn-show-answer').style.display = 'none';
     document.getElementById('srs-buttons').style.display = 'flex';
-    
-    if (currentReviewCard.cardSource && document.getElementById('card-sources-block')) {
+
+    // Show sources if available
+    const card = reviewQueue[currentReviewIdx];
+    if (card && card.sourceText && card.sourceText.trim()) {
         document.getElementById('card-sources-block').style.display = 'block';
-        document.getElementById('card-source-text').innerText = currentReviewCard.cardSource;
     }
+};
+
+window.submitReview = function (rating) {
+    const card = reviewQueue[currentReviewIdx];
+    if (!card) return;
+
+    const now = Date.now();
+    const minute = 60 * 1000;
+    const hour = 60 * minute;
+    const day = 24 * hour;
+
+    switch (rating) {
+        case 'disable':
+            // Remove flashcard status
+            card.isFlashcard = false;
+            card.nextReview = 0;
+            break;
+        case 'forgot':
+            // Reset — review again in 1 minute
+            card.ease = Math.max(1.3, card.ease - 0.2);
+            card.interval = 0;
+            card.nextReview = now + minute;
+            break;
+        case 'easy':
+            // Remembered — advance SRS
+            if (card.interval === 0) {
+                card.interval = 1; // 1 day
+            } else {
+                card.interval = Math.round(card.interval * card.ease);
+            }
+            card.ease = Math.min(3.0, card.ease + 0.1);
+            card.nextReview = now + (card.interval * day);
+            break;
+    }
+
+    if (typeof saveDb === 'function') saveDb();
+    if (typeof updateSRSQueue === 'function') updateSRSQueue();
+
+    currentReviewIdx++;
+    showReviewCard();
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
-window.submitReview = function(rating) {
-    const c = currentReviewCard;
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    
-    if (rating === 'disable') {
-        db.rems = db.rems.filter(r => r.id !== c.id);
-        saveDb();
-        if(window.renderRems) window.renderRems();
-    } else if (rating === 'forgot') {
-        c.interval = 0;
-        c.ease = Math.max(1.3, c.ease - 0.2);
-        c.nextReview = now + 10 * 60 * 1000; 
-        saveDb();
-    } else {
-        c.interval = Math.max(4, c.interval === 0 ? 4 : c.interval * c.ease * 1.3);
-        c.ease += 0.15;
-        c.nextReview = now + (c.interval * dayMs);
-        saveDb();
-    }
-    
-    // Check if more to review
-    const reviewQueue = db.rems.filter(r => r.isFlashcard && r.nextReview <= now && r.docId === activeDocId);
-    if(reviewQueue.length > 0) {
-        window.startReview();
-    } else {
-        closeModal('review-modal');
-        updateSRSQueue();
-    }
-    
-    if (window.refreshAppUI) {
-        window.refreshAppUI();
-    }
-}
+// Initialize on DOM ready
+window.addEventListener('DOMContentLoaded', () => {
+    // renderRems will be called by refreshAppUI in app.js
+});
