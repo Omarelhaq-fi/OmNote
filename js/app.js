@@ -8,9 +8,9 @@ let db = {
 
 let activeDocId = null;
 
-async function initApp() {
+async function initApp(user) {
     let cloudDb = null;
-    if (window.loadDbFromCloud) {
+    if (user && window.loadDbFromCloud) {
         cloudDb = await window.loadDbFromCloud();
     }
     
@@ -58,7 +58,7 @@ async function initApp() {
 
 function saveDb() {
     localStorage.setItem('omnote_db_v2', JSON.stringify(db));
-    if (window.syncDbToCloud) {
+    if (window.firebase && firebase.auth().currentUser && window.syncDbToCloud) {
         window.syncDbToCloud(db);
     }
 }
@@ -358,5 +358,87 @@ window.toggleAccordion = function(headerElement) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    initApp();
+    if (window.firebase && firebase.auth) {
+        const unsubscribe = firebase.auth().onAuthStateChanged(user => {
+            unsubscribe();
+            initApp(user);
+            updateAuthUI(user);
+        });
+        
+        // Listen for subsequent changes to update UI
+        firebase.auth().onAuthStateChanged(user => {
+            updateAuthUI(user);
+        });
+    } else {
+        initApp(null);
+    }
 });
+
+// Auth Logic
+window.openAuthModal = function() {
+    window.openModal('auth-modal');
+}
+
+function updateAuthUI(user) {
+    const btn = document.getElementById('btn-auth-top');
+    if (btn) {
+        btn.innerText = user ? "👤 Account" : "👤 Login / Register";
+        btn.style.color = user ? "#22c55e" : "var(--border-blue)";
+    }
+    
+    if (user) {
+        document.getElementById('auth-logged-out').style.display = 'none';
+        document.getElementById('auth-logged-in').style.display = 'block';
+        document.getElementById('auth-current-user').innerText = user.email;
+    } else {
+        document.getElementById('auth-logged-out').style.display = 'block';
+        document.getElementById('auth-logged-in').style.display = 'none';
+    }
+}
+
+window.handleLogin = async function() {
+    const email = document.getElementById('auth-email').value;
+    const pass = document.getElementById('auth-password').value;
+    const err = document.getElementById('auth-error');
+    err.style.display = 'none';
+    
+    try {
+        await firebase.auth().signInWithEmailAndPassword(email, pass);
+        // Reload app with new user data
+        initApp(firebase.auth().currentUser);
+        closeModal('auth-modal');
+    } catch(e) {
+        err.innerText = e.message;
+        err.style.display = 'block';
+    }
+}
+
+window.handleRegister = async function() {
+    const email = document.getElementById('auth-email').value;
+    const pass = document.getElementById('auth-password').value;
+    const err = document.getElementById('auth-error');
+    err.style.display = 'none';
+    
+    try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+        // Migration: If they have local data, immediately sync it to their new cloud account!
+        const localData = localStorage.getItem('omnote_db_v2');
+        if (localData) {
+            db = JSON.parse(localData);
+            saveDb(); // This will now sync to cloud since they are logged in!
+        }
+        
+        closeModal('auth-modal');
+        alert("Account created! Your local data has been migrated to the cloud.");
+    } catch(e) {
+        err.innerText = e.message;
+        err.style.display = 'block';
+    }
+}
+
+window.handleLogout = async function() {
+    await firebase.auth().signOut();
+    // Re-init as local only
+    initApp(null);
+    closeModal('auth-modal');
+}
