@@ -16,6 +16,25 @@
 </head>
 <body>
 
+    <!-- Full Screen Login Gatekeeper -->
+    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: var(--bg-color); z-index: 10000; position: fixed; top: 0; left: 0;">
+        <div style="background: var(--panel-bg); width: 400px; max-width: 90vw; border-radius: 12px; padding: 40px; text-align: center; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">OmNote</div>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Sign in to access your cloud workspace.</p>
+            
+            <input type="email" id="auth-email" placeholder="Email Address" style="width: 100%; padding: 12px; margin-bottom: 15px; background: #1e1e1e; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box;">
+            <input type="password" id="auth-password" placeholder="Password" style="width: 100%; padding: 12px; margin-bottom: 20px; background: #1e1e1e; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box;">
+            
+            <div id="auth-error" style="color: #ef4444; font-size: 0.85rem; margin-bottom: 15px; display: none;"></div>
+            
+            <button onclick="window.handleLogin()" style="width: 100%; padding: 12px; background: var(--border-blue); color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">Log In</button>
+            <button onclick="window.handleRegister()" style="width: 100%; padding: 12px; background: transparent; color: var(--border-blue); font-weight: bold; border: 1px solid var(--border-blue); border-radius: 6px; cursor: pointer;">Create Account</button>
+        </div>
+    </div>
+
+    <!-- Main App Wrapper -->
+    <div id="app-wrapper" style="display: none; height: 100vh; flex-direction: column; width: 100%;">
+
     <!-- Sidebar Overlay -->
     <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div id="sidebar-menu">
@@ -38,6 +57,22 @@
                 <div>Flashcards Mastered</div>
                 <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-active); margin-top: 5px;" id="stat-mastered">0</div>
             </div>
+            
+            <div style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px;">Study Stats</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="stat-card">
+                    <div style="font-size: 0.75rem;">Today</div>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 5px;" id="stat-today">0m</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.75rem;">This Week</div>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 5px;" id="stat-week">0m</div>
+                </div>
+            </div>
+            <div class="stat-card" style="margin-top: 10px;">
+                <div style="font-size: 0.75rem;">This Month</div>
+                <div style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 5px;" id="stat-month">0m</div>
+            </div>
         </div>
     </div>
 
@@ -45,7 +80,8 @@
     <div id="topbar">
         <div class="topbar-left">
             <button class="btn-icon" onclick="toggleSidebar()"><span style="font-size: 1.2rem;">☰</span> Menu</button>
-            <div class="doc-title-group" style="margin-left: 15px;">
+            <button class="btn-icon" onclick="showHomeView()" style="margin-left: 10px;"><span style="font-size: 1.2rem;">🏠</span> Home</button>
+            <div class="doc-title-group" id="top-doc-title-group" style="margin-left: 15px;">
                 <div class="doc-title" id="top-doc-title">Untitled Document</div>
                 <div class="doc-subtitle">OmNote Learning</div>
             </div>
@@ -61,7 +97,35 @@
                 <div class="tab-item" onclick="switchLeftView('summary-view', this)">📑 Read Summary</div>
                 <div class="tab-item active" onclick="switchLeftView('notes-view', this)">📝 Notes</div>
             </div>
+            
+            <div class="pomodoro-container" style="display:flex; align-items:center; gap: 5px; margin-left: 15px; border-left: 1px solid var(--border-color); padding-left: 15px;">
+                <button class="btn-icon" id="btn-timer" onclick="toggleTimer()" style="font-weight: bold; width: 75px; text-align: left; padding: 5px;">▶️ 25:00</button>
+                <button class="btn-icon" onclick="resetTimer()" title="Reset Timer" style="padding: 5px;">🔄</button>
+                <button class="btn-icon" onclick="openTimerSettings()" title="Timer Settings" style="padding: 5px;">⚙️</button>
+            </div>
+
             <button class="btn-icon" style="color:var(--text-main); font-weight:bold; margin-left: 15px;" id="btn-review-queue" onclick="startReview()">📚 Review Queue (0)</button>
+            <button class="btn-icon" style="margin-left: 15px; color: #ef4444; font-weight: bold;" onclick="window.handleLogout()">Log Out</button>
+        </div>
+    </div>
+
+    <!-- Home View -->
+    <div id="home-view" style="display: none; padding: 40px; overflow-y: auto; height: calc(100vh - 60px); width: 100%; box-sizing: border-box; background: var(--bg-main);">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;">
+                <div>
+                    <h1 style="font-size: 2.5rem; margin-bottom: 10px; font-weight: 800; background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Welcome back.</h1>
+                    <p style="color: var(--text-muted); font-size: 1.1rem;">Ready to master something new today?</p>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn-action" style="background: #333; color: white;" onclick="window.createNewDocument()">📄 New Document</button>
+                    <button class="btn-action" style="background: var(--bg-purple); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;" onclick="document.getElementById('pdf-upload').click()">📎 Upload PDF</button>
+                </div>
+            </div>
+            
+            <div id="home-subjects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px;">
+                <!-- Dynamically populated subjects and documents -->
+            </div>
         </div>
     </div>
 
@@ -205,11 +269,34 @@
         </div>
     </div>
 
+    <!-- Exam Modal -->
+    <div id="exam-modal" class="modal" style="background: rgba(15,15,15,0.9);">
+        <div class="modal-content" style="background: #2b2b2b; width: 900px; max-width: 95vw; max-height: 90vh; overflow-y: auto; border-radius: 12px; padding: 20px; color: #fff; border: 1px solid #444; position: relative;">
+            <button onclick="closeModal('exam-modal')" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:#888; cursor:pointer; font-size: 1.5rem;">✕</button>
+            <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: #ef4444; text-align: center;">Hard Exam Simulation</div>
+            <div id="exam-modal-content">
+                <!-- Exam questions rendered here -->
+            </div>
+            <button onclick="closeModal('exam-modal')" style="width:100%; margin-top:20px; background:#ef4444; border:none; padding:12px; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Finish Exam</button>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div id="image-viewer-modal" class="modal" style="background: rgba(15,15,15,0.9);">
+        <div class="modal-content" style="background: #1e1e1e; width: 1000px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 20px; color: #fff; border: 1px solid #444; position: relative;">
+            <button onclick="closeModal('image-viewer-modal')" style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:#888; cursor:pointer; font-size: 1.5rem;">✕</button>
+            <div id="image-viewer-content" style="margin-top: 20px;">
+                <!-- Images rendered here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Popover Component -->
     <div id="selection-popover" class="custom-popover">
         <div class="popover-sidebar">
             <button class="popover-btn active" onclick="explainText()"><span style="margin-right:8px;">💡</span>Explain</button>
             <button class="popover-btn" onclick="addCardFromSelection()"><span style="margin-right:8px;">➕</span>Add Card</button>
+            <button class="popover-btn" onclick="showImageForSelection()"><span style="margin-right:8px;">🖼️</span>Show Image</button>
         </div>
         <div class="popover-main">
             <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 15px;">What the sentence means</div>
@@ -220,8 +307,11 @@
         </div>
     </div>
 
+    </div> <!-- End of app-wrapper -->
+
     <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script>
         const firebaseConfig = {
@@ -235,14 +325,25 @@
         };
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const auth = firebase.auth();
         
-        window.syncDbToCloud = function(dbObj) {
-            database.ref('omnote_data/master').set(dbObj).catch(e => console.error("Firebase sync error", e));
+        window.syncDbToCloud = async function(dbObj) {
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    await database.ref('omnote_data/master/users/' + user.uid + '/data').set(dbObj);
+                } catch(e) {
+                    console.error("Firebase sync error", e);
+                    alert("Firebase Error: " + e.message + "\nYour database rules might be blocking writes.");
+                }
+            }
         };
         
         window.loadDbFromCloud = async function() {
+            const user = auth.currentUser;
+            if (!user) return null;
             try {
-                const snapshot = await database.ref('omnote_data/master').once('value');
+                const snapshot = await database.ref('omnote_data/master/users/' + user.uid + '/data').once('value');
                 return snapshot.val();
             } catch (e) {
                 console.error("Firebase load error", e);
@@ -257,6 +358,7 @@
     <script src="js/pdf.js"></script>
     <script src="js/ai.js"></script>
     <script src="js/summary.js"></script>
+    <script src="js/timer.js"></script>
 
 </body>
 </html>
