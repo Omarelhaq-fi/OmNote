@@ -86,6 +86,7 @@ window.toggleRightPane = function () {
     const rightPane = document.getElementById('right-pane');
     if (rightPane) {
         rightPane.classList.toggle('collapsed');
+        document.body.classList.toggle('sidebar-closed', rightPane.classList.contains('collapsed'));
     }
 }
 
