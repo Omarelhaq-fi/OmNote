@@ -865,6 +865,9 @@ body::before {
 .doc-title-editor::placeholder { color: var(--text-dim); }
 
 /* Summary view */
+#summary-view {
+    background: #1a1d24;
+}
 .summary-header {
     padding: 24px 40px 12px;
     border-bottom: 1px solid var(--border-subtle);
@@ -900,11 +903,13 @@ body::before {
 }
 
 .markdown-body {
-    padding: 32px 60px;
-    line-height: 1.85;
-    font-size: 1.02rem;
+    padding: 40px 60px;
+    line-height: 1.6;
+    font-size: 1.05rem;
     max-width: 900px;
     margin: 0 auto;
+    color: #e2e8f0;
+    font-family: 'Inter', 'Roboto', 'Segoe UI', sans-serif;
     animation: fadeInUp 0.3s var(--transition-smooth);
     transition: max-width var(--transition-base), font-size var(--transition-base);
 }
@@ -917,35 +922,32 @@ body.sidebar-closed .markdown-body {
     font-size: 2.2rem;
     margin-bottom: 24px;
     font-weight: 800;
-    background: var(--gradient-brand-h);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #ffffff;
 }
 .markdown-body h2 {
     font-size: 1.6rem;
     margin-top: 36px;
     margin-bottom: 14px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #ffffff;
 }
 .markdown-body h3 {
     font-size: 1.2rem;
     margin-top: 24px;
     margin-bottom: 10px;
     font-weight: 600;
-    color: var(--accent-cyan);
+    color: #cbd5e1;
 }
 .markdown-body p {
     margin-bottom: 18px;
-    color: var(--text-secondary);
+    color: #e2e8f0;
 }
 .markdown-body ul, .markdown-body ol {
-    color: var(--text-secondary);
+    color: #e2e8f0;
     padding-left: 24px;
 }
-.markdown-body li { margin-bottom: 6px; }
-.markdown-body strong { color: var(--text-primary); }
+.markdown-body li { margin-bottom: 8px; }
+.markdown-body strong { color: #ffffff; }
 .markdown-body ::selection { background: rgba(6,182,212,0.25); }
 .markdown-body code {
     background: rgba(0,0,0,0.3);
