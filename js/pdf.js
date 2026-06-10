@@ -139,10 +139,22 @@ window.renderAccordionSections = function () {
         if (idx === 0) item.classList.add('expanded');
         item.style.animationDelay = `${idx * 0.06}s`;
 
+        let mastery = 0;
+        if (sec.summaryRead) mastery += 33;
+        if (sec.flashcardsGenerated) mastery += 33;
+        if (sec.examTaken) mastery += 34;
+
+        let badgeStyle = '';
+        let badgeText = `${mastery}%`;
+        if (mastery === 100) {
+            badgeStyle = 'background: linear-gradient(135deg, rgba(6,182,212,0.2), rgba(59,130,246,0.2)); color: var(--accent-cyan); border-color: rgba(6,182,212,0.5); box-shadow: 0 0 10px rgba(6,182,212,0.2);';
+            badgeText = '🌟 100% Mastered';
+        }
+
         item.innerHTML = `
             <div class="accordion-header" onclick="toggleAccordion(this)">
                 <span><span class="acc-num">${idx + 1}</span> ${sec.title}</span>
-                <span class="header-right"><span class="progress-badge">0%</span> ${idx === 0 ? '⌃' : '⌄'}</span>
+                <span class="header-right"><span class="progress-badge" style="${badgeStyle}">${badgeText}</span> ${idx === 0 ? '⌃' : '⌄'}</span>
             </div>
             <div class="accordion-content">
                 
@@ -151,7 +163,9 @@ window.renderAccordionSections = function () {
                     <div class="next-step-body">
                         <div class="next-step-title">📖 Read</div>
                         <div style="display:flex; gap:10px;">
-                            <button class="btn-dark-pill" onclick="readSummary('${sec.title.replace(/'/g, "\\'")}')">📑 Read Summary</button>
+                            ${sec.summaryRead ? 
+                                `<button class="btn-dark-pill" style="border-color:var(--accent-emerald); color:var(--accent-emerald)" onclick="readSummary('${sec.title.replace(/'/g, "\\'")}')">✅ Summary Read</button>` : 
+                                `<button class="btn-dark-pill" onclick="readSummary('${sec.title.replace(/'/g, "\\'")}')">📑 Read Summary</button>`}
                             <button class="btn-dark-pill" onclick="window.switchLeftView('pdf-view', document.querySelectorAll('#left-pane-tabs .left-tab-item')[0])">📄 Read PDF</button>
                         </div>
                     </div>
@@ -164,7 +178,7 @@ window.renderAccordionSections = function () {
                     </div>
                     <div class="action-card card-green">
                         <span style="font-weight:700; display:flex; align-items:center; gap:8px;">❓ Quiz</span>
-                        <button class="btn-action" onclick="generateQuiz('${sec.title.replace(/'/g, "\\'")}')">Take Exam</button>
+                        ${sec.examTaken ? `<button class="btn-action" style="background: rgba(16,185,129,0.2); color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3);" onclick="generateQuiz('${sec.title.replace(/'/g, "\\'")}')">✅ Exam Taken</button>` : `<button class="btn-action" onclick="generateQuiz('${sec.title.replace(/'/g, "\\'")}')">Take Exam</button>`}
                     </div>
                 </div>
                 
