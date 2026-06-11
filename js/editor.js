@@ -3,7 +3,7 @@
 // ============================================================
 // ADD REM — Core function to add a rem (note/flashcard) to the db
 // ============================================================
-window.addRem = function (docId, text, indent, parentId, sourceText) {
+window.addRem = function (docId, text, indent, parentId, sourceText, topic) {
     const id = Math.random().toString(36).substr(2, 9);
     const isFlashcard = text.includes('==');
 
@@ -25,6 +25,7 @@ window.addRem = function (docId, text, indent, parentId, sourceText) {
         front: front,
         back: back,
         sourceText: sourceText || '',
+        topic: topic || null,
         ease: 2.5,
         interval: 0,
         nextReview: isFlashcard ? Date.now() : 0,
@@ -232,6 +233,22 @@ window.startReview = function () {
 
     if (reviewQueue.length === 0) {
         alert("No flashcards due for review! 🎉");
+        return;
+    }
+
+    currentReviewIdx = 0;
+    showReviewCard();
+    window.openModal('review-modal');
+};
+
+window.startChunkReview = function (topic) {
+    if (!activeDocId) return;
+    
+    // For single chunk review, we practice all flashcards generated for this topic, regardless of nextReview date
+    reviewQueue = db.rems.filter(r => r.isFlashcard && r.docId === activeDocId && r.topic === topic);
+
+    if (reviewQueue.length === 0) {
+        alert("No flashcards found for this section! Generate them first.");
         return;
     }
 

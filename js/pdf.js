@@ -174,7 +174,7 @@ window.renderAccordionSections = function () {
                 <div class="action-cards-grid">
                     <div class="action-card card-purple">
                         <span style="font-weight:700; display:flex; align-items:center; gap:8px;">🃏 Flashcards</span>
-                        ${sec.flashcardsGenerated ? `<button class="btn-action" style="background: rgba(16,185,129,0.2); color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3); cursor:default;" disabled>✅ Cards Generated</button>` : `<button class="btn-action" onclick="generateCards('${sec.title.replace(/'/g, "\\'")}')">Generate Cards</button>`}
+                        ${sec.flashcardsGenerated ? `<button class="btn-action" style="background: rgba(16,185,129,0.2); color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3);" onclick="startChunkReview('${sec.title.replace(/'/g, "\\'")}')">✅ Cards Generated (Practice)</button>` : `<button class="btn-action" onclick="generateCards('${sec.title.replace(/'/g, "\\'")}')">Generate Cards</button>`}
                     </div>
                     <div class="action-card card-green">
                         <span style="font-weight:700; display:flex; align-items:center; gap:8px;">❓ Quiz</span>

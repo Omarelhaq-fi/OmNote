@@ -465,3 +465,70 @@ window.handleLogout = async function () {
     await firebase.auth().signOut();
     initApp(null);
 }
+
+// Global Loading Screen Logic
+let loadingInterval = null;
+const funMessages = [
+    "Brewing some intelligence...",
+    "Reading the whole textbook in 3 seconds...",
+    "Double-checking the facts...",
+    "Cross-referencing the universe...",
+    "Analyzing semantic structures...",
+    "Reticulating splines...",
+    "Connecting the neural pathways...",
+    "Synthesizing knowledge...",
+    "Preparing your premium study materials..."
+];
+
+window.showLoadingScreen = function(title = "Generating...") {
+    const overlay = document.getElementById('global-loading-overlay');
+    const titleEl = document.getElementById('loading-title');
+    const textEl = document.getElementById('loading-text');
+    const progressFill = document.querySelector('.progress-bar-fill');
+    
+    if(!overlay || !titleEl || !textEl || !progressFill) return;
+    
+    titleEl.innerText = title;
+    overlay.style.display = 'flex';
+    
+    // Simulate progress bar
+    progressFill.style.width = '0%';
+    setTimeout(() => progressFill.style.width = '30%', 100);
+    setTimeout(() => progressFill.style.width = '70%', 3000);
+    setTimeout(() => progressFill.style.width = '90%', 8000);
+    
+    let msgIndex = 0;
+    textEl.style.opacity = 0;
+    setTimeout(() => {
+        textEl.innerText = funMessages[msgIndex];
+        textEl.style.opacity = 1;
+    }, 300);
+
+    if(loadingInterval) clearInterval(loadingInterval);
+    loadingInterval = setInterval(() => {
+        textEl.style.opacity = 0;
+        setTimeout(() => {
+            msgIndex = (msgIndex + 1) % funMessages.length;
+            textEl.innerText = funMessages[msgIndex];
+            textEl.style.opacity = 1;
+        }, 300);
+    }, 3500);
+}
+
+window.hideLoadingScreen = function() {
+    const overlay = document.getElementById('global-loading-overlay');
+    const progressFill = document.querySelector('.progress-bar-fill');
+    
+    if(!overlay || !progressFill) return;
+    
+    if(loadingInterval) {
+        clearInterval(loadingInterval);
+        loadingInterval = null;
+    }
+    
+    progressFill.style.width = '100%';
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        progressFill.style.width = '0%';
+    }, 300);
+}
