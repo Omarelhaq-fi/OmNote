@@ -174,6 +174,7 @@
 
             <!-- LEFT PANE -->
             <div id="left-pane">
+                <canvas id="drawing-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9000; touch-action: none;"></canvas>
 
                 <!-- Left Pane Sub-tabs -->
                 <div class="left-pane-tabs" id="left-pane-tabs">
@@ -231,23 +232,12 @@
 
                 <!-- Right Pane Tabs -->
                 <div class="right-tabs">
-                    <button class="right-tab-item active" onclick="switchRightView('quiz-view', this)">❓ Quiz</button>
-                    <button class="right-tab-item" onclick="switchRightView('learn-view', this)">✨ Study Plan</button>
+                    <button class="right-tab-item active" onclick="switchRightView('learn-view', this)">✨ Study Plan</button>
                     <button class="right-tab-item" onclick="switchRightView('ai-view', this)">🤖 AI Tutor</button>
                 </div>
 
-                <!-- Test Your Knowledge View -->
-                <div id="quiz-view" class="right-view-section active">
-                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">As you read the
-                        summary, answer the following questions:</div>
-                    <div id="quiz-container">
-                        <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">Click "Quiz Me" in
-                            the Study Plan to generate a quiz.</div>
-                    </div>
-                </div>
-
                 <!-- Learn PDF View -->
-                <div id="learn-view" class="right-view-section">
+                <div id="learn-view" class="right-view-section active">
                     <div id="accordion-container">
                         <div style="color: var(--text-muted); text-align: center; margin-top: 50px;">Upload a PDF to
                             generate a study plan.</div>
@@ -433,7 +423,20 @@
     <script src="js/ai.js"></script>
     <script src="js/summary.js"></script>
     <script src="js/timer.js"></script>
+    <script src="js/draw.js"></script>
 
+    <!-- Tablet Floating Toolbar -->
+    <div id="tablet-toolbar">
+        <div class="tablet-toolbar-group">
+            <button class="tablet-tool-btn" id="tool-pen" onclick="window.toggleDrawingMode('pen')">🖊️</button>
+            <button class="tablet-tool-btn" id="tool-highlight" onclick="window.toggleDrawingMode('highlight')">🖍️</button>
+            <button class="tablet-tool-btn" id="tool-eraser" onclick="window.clearCanvas()">🧹</button>
+        </div>
+        <div class="tablet-toolbar-group">
+            <button class="tablet-tool-btn" onclick="window.tabletExplain()">🪄 Explain</button>
+            <button class="tablet-tool-btn" onclick="window.tabletFlashcard()">🃏 Flashcard</button>
+        </div>
+    </div>
 </body>
 
 </html>
