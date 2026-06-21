@@ -145,6 +145,7 @@
 
                 <button class="btn-icon" onclick="window.toggleRightPane()" title="Toggle Sidebar" style="font-size: 1.1rem;">◨</button>
                 <button class="btn-icon" onclick="window.toggleFullScreen()" title="Full Screen" style="font-size: 1.1rem;">⛶</button>
+                <button class="btn-icon" onclick="window.openApiSettingsModal()" title="Global Settings" style="font-size: 1.1rem;">⚙️</button>
 
                 <button class="btn-logout" onclick="window.handleLogout()">Log Out</button>
             </div>
@@ -205,6 +206,7 @@
                                 style="font-size: 1.05rem; font-weight: 700; display:flex; align-items:center; gap:8px;">📑
                                 Read Summary</span>
                             <div class="summary-toggles">
+                                <button id="btn-regenerate-summary" class="toggle-btn" style="display: none;" onclick="window.regenerateCurrentSummary()">Regenerate</button>
                                 <button class="toggle-btn">Compact</button>
                                 <button class="toggle-btn active">Detailed</button>
                             </div>
@@ -330,6 +332,26 @@
             </div>
         </div>
 
+        <!-- Global Custom Action Settings Modal -->
+        <div id="global-custom-modal" class="modal">
+            <div class="exam-modal-content" style="max-width: 500px;">
+                <button class="exam-close-btn" onclick="closeModal('global-custom-modal')">✕</button>
+                <div class="exam-title" id="global-custom-title">Configure Custom Action</div>
+                <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Select the topics you want to include.</div>
+                
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between;">
+                    <button class="btn-dark-pill" onclick="window.toggleAllGlobalTopics(true)">Select All</button>
+                    <button class="btn-dark-pill" onclick="window.toggleAllGlobalTopics(false)">Deselect All</button>
+                </div>
+
+                <div id="global-custom-topics-container" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; text-align: left;">
+                    <!-- Checkboxes populated here -->
+                </div>
+                
+                <button id="global-custom-start-btn" class="btn-action primary" style="width: 100%; padding: 14px; font-size: 1.05rem;" onclick="window.startGlobalCustomAction()">Start</button>
+            </div>
+        </div>
+
         <!-- Image Viewer Modal -->
         <div id="image-viewer-modal" class="modal">
             <div class="image-modal-content">
@@ -337,6 +359,50 @@
                 <div id="image-viewer-content" style="margin-top: 20px;">
                     <!-- Images rendered here -->
                 </div>
+            </div>
+        </div>
+        <!-- Global API Settings Modal -->
+        <div id="api-settings-modal" class="modal">
+            <div class="exam-modal-content" style="max-width: 500px; text-align: left;">
+                <button class="exam-close-btn" onclick="closeModal('api-settings-modal')">✕</button>
+                <div class="exam-title" style="margin-bottom: 20px;">⚙️ Global Settings</div>
+                
+                <div style="font-weight: 700; margin-bottom: 10px;">Gemini API Keys</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">
+                    Keys added here are stored locally on your device. The app will automatically rotate through them if a rate limit is hit.
+                </div>
+                
+                <div id="api-keys-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Populated by app.js -->
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="new-api-key-input" class="login-input" placeholder="Enter new Gemini API Key..." style="flex: 1; margin: 0; padding: 10px;">
+                    <button class="btn-action primary" onclick="window.handleAddApiKey()" style="padding: 10px 15px;">Add Key</button>
+                </div>
+                
+                <div id="api-key-test-result" style="font-size: 0.85rem; margin-top: 10px; min-height: 20px;"></div>
+            </div>
+        </div>
+
+        
+        <!-- Upload Settings Modal -->
+        <div id="upload-settings-modal" class="modal">
+            <div class="exam-modal-content" style="max-width: 450px; text-align: left;">
+                <button class="exam-close-btn" onclick="closeModal('upload-settings-modal')">✕</button>
+                <div class="exam-title" id="upload-modal-title" style="margin-bottom: 20px;">Scan Document Settings</div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; font-size:0.9rem; color:var(--text-secondary); margin-bottom:8px;">Pages to Scan <span id="upload-max-pages" style="color:var(--text-muted); font-size:0.8rem;"></span></label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="number" id="upload-start-page" class="login-input" style="width:100px; margin:0;" min="1" value="1">
+                        <span style="color:var(--text-muted);">to</span>
+                        <input type="number" id="upload-end-page" class="login-input" style="width:100px; margin:0;" min="1">
+                    </div>
+                </div>
+
+
+                <button class="btn-action primary" style="width: 100%; padding: 14px;" onclick="window.startPdfProcessing()">Start Scan</button>
             </div>
         </div>
 
@@ -349,6 +415,12 @@
                     Card</button>
                 <button class="popover-btn" onclick="showImageForSelection()"><span
                         style="margin-right:8px;">🖼️</span>Show Image</button>
+                <button class="popover-btn" onclick="highlightSelection()"><span
+                        style="margin-right:8px;">🖍️</span>Highlight</button>
+                <button class="popover-btn" onclick="addNoteToSelection()"><span
+                        style="margin-right:8px;">📝</span>Add Note</button>
+                <button class="popover-btn" onclick="editSelectionText()"><span
+                        style="margin-right:8px;">✏️</span>Edit Text</button>
             </div>
             <div class="popover-main">
                 <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 15px;">What the sentence means</div>
