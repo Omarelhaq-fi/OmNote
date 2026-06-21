@@ -177,6 +177,76 @@ window.tabletExplain = function() {
     window.explainText();
 };
 
+window.highlightSelection = function() {
+    if (!currentSelection) return;
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const span = document.createElement('mark');
+    span.style.backgroundColor = 'rgba(245, 158, 11, 0.4)';
+    span.style.color = 'inherit';
+    span.style.borderRadius = '2px';
+    try {
+        range.surroundContents(span);
+        if (window.saveEditedSummary) window.saveEditedSummary();
+    } catch(e) {
+        alert("Please select text within a single paragraph to highlight.");
+    }
+    hidePopover();
+};
+
+window.addNoteToSelection = function() {
+    if (!currentSelection) return;
+    const note = prompt("Enter your note:");
+    if (!note) return;
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const span = document.createElement('span');
+    span.style.borderBottom = '2px dashed var(--accent-cyan)';
+    span.style.cursor = 'help';
+    span.title = note;
+    try {
+        range.surroundContents(span);
+        if (window.saveEditedSummary) window.saveEditedSummary();
+    } catch(e) {
+        alert("Please select text within a single paragraph to add a note.");
+    }
+    hidePopover();
+};
+
+window.saveEditedSummary = function() {
+    const contentDiv = document.getElementById('summary-content');
+    if (!contentDiv || !window.currentSummaryTopic) return;
+    
+    const clone = contentDiv.cloneNode(true);
+    const quizzes = clone.querySelectorAll('.section-quiz-wrap');
+    quizzes.forEach(q => q.remove());
+    
+    const doc = window.getActiveDoc ? window.getActiveDoc() : null;
+    if (doc && doc.sections) {
+        const sec = doc.sections.find(s => s.title === window.currentSummaryTopic);
+        if (sec) {
+            sec.summaryCacheHTML = clone.innerHTML;
+            if (typeof saveDb === 'function') saveDb();
+        }
+    }
+};
+
+window.editSelectionText = function() {
+    if (!currentSelection) return;
+    const newText = prompt("Edit text:", currentSelection);
+    if (newText !== null) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(document.createTextNode(newText));
+        if (window.saveEditedSummary) window.saveEditedSummary();
+    }
+    hidePopover();
+};
+
 window.tabletFlashcard = function() {
     const text = window.getSelection().toString().trim();
     if (!text || text.length < 5) return alert('Please select some text first.');

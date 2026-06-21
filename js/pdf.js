@@ -38,86 +38,139 @@ window.handleFileUpload = async function (event) {
         // Show loading in Study Plan
         if (window.switchRightView) window.switchRightView('learn-view', document.querySelectorAll('.right-tabs .right-tab-item')[1]);
         const accordion = document.getElementById('accordion-container');
-        accordion.innerHTML = '<div style="padding: 20px; color: var(--text-muted); text-align: center;">Extracting text from PDF...</div>';
+        accordion.innerHTML = '<div style="padding: 20px; color: var(--text-muted); text-align: center;">Reading document...</div>';
 
         // Extract text
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            // Check if first page has text
+            const page1 = await pdf.getPage(1);
+            const textContent = await page1.getTextContent();
+            const hasText = textContent.items.length > 10;
+            
+            // Store globally temporarily so the modal can access it
+            window.currentPendingPdf = pdf;
+            window.currentPendingFilename = file.name;
+            
+            // Open Modal
+            document.getElementById('upload-start-page').value = 1;
+            document.getElementById('upload-end-page').value = Math.min(10, pdf.numPages);
+            document.getElementById('upload-max-pages').innerText = `(Max: ${pdf.numPages})`;
+            
+            if (hasText) {
+                document.getElementById('upload-modal-title').innerText = "Scan Document Settings";
+                window.currentPendingNeedsOCR = false;
+            } else {
+                document.getElementById('upload-modal-title').innerText = "OCR Settings (Scanned PDF Detected)";
+                window.currentPendingNeedsOCR = true;
+            }
+            
+            window.openModal('upload-settings-modal');
 
-            let fullText = "";
-            const maxPages = pdf.numPages; // Read the entire file
+        } catch (error) {
+            console.error("PDF Read Error", error);
+            accordion.innerHTML = '<div style="padding: 20px; color: var(--accent-rose); text-align: center;">Error reading PDF file. Please ensure it is not corrupted or password protected.</div>';
+        }
+    } else {
+        alert("Please upload a valid PDF file.");
+    }
+}
 
-            for (let i = 1; i <= maxPages; i++) {
+window.startPdfProcessing = async function() {
+    window.closeModal('upload-settings-modal');
+    
+    const pdf = window.currentPendingPdf;
+    const filename = window.currentPendingFilename;
+    const needsOCR = window.currentPendingNeedsOCR;
+    
+    if (!pdf) return;
+    
+    let startPage = parseInt(document.getElementById('upload-start-page').value) || 1;
+    let endPage = parseInt(document.getElementById('upload-end-page').value) || pdf.numPages;
+    
+    // Validate
+    startPage = Math.max(1, startPage);
+    endPage = Math.min(pdf.numPages, endPage);
+    if (startPage > endPage) {
+        let temp = startPage;
+        startPage = endPage;
+        endPage = temp;
+    }
+    
+    let scale = 2.5; // best (High resolution)
+    
+    const accordion = document.getElementById('accordion-container');
+    let fullText = "";
+    
+    try {
+        if (!needsOCR) {
+            const totalPagesToScan = endPage - startPage + 1;
+            let pagesScanned = 0;
+            for (let i = startPage; i <= endPage; i++) {
+                pagesScanned++;
+                accordion.innerHTML = `<div style="padding: 20px; color: var(--text-muted); text-align: center;">Extracting text from page ${i} (Progress: ${pagesScanned} of ${totalPagesToScan})...</div>`;
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 const pageText = textContent.items.map(item => item.str).join(' ');
                 fullText += pageText + "\n";
             }
-
-            if (fullText.trim().length < 100) {
-                // OCR Fallback
-                accordion.innerHTML = '<div style="padding: 20px; color: var(--accent-violet); text-align: center;">Scanned PDF detected. Running OCR (Optical Character Recognition)... this may take a minute.</div>';
-
-                fullText = "";
-                let ocrPagesStr = prompt(`Scanned PDF detected (${pdf.numPages} total pages). OCR scanning takes a few seconds per page. Enter a number to scan from the beginning (e.g., "10") or a range (e.g., "15-30"):`, "10");
-
-                let startPage = 1;
-                let endPage = 10;
-
-                if (ocrPagesStr && ocrPagesStr.includes('-')) {
-                    const parts = ocrPagesStr.split('-');
-                    startPage = Math.max(1, parseInt(parts[0]) || 1);
-                    endPage = Math.min(pdf.numPages, parseInt(parts[1]) || pdf.numPages);
-                    if (startPage > endPage) {
-                        const temp = startPage;
-                        startPage = endPage;
-                        endPage = temp;
-                    }
-                } else {
-                    endPage = Math.min(pdf.numPages, parseInt(ocrPagesStr) || 10);
+        } else {
+            const totalPagesToScan = endPage - startPage + 1;
+            let pagesScanned = 0;
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            accordion.innerHTML = `<div style="padding: 20px; color: var(--accent-violet); text-align: center;">Initializing Advanced OCR Engine...</div>`;
+            const worker = await Tesseract.createWorker('eng', 1, {
+                langPath: 'https://tessdata.projectnaptha.com/4.0.0_best'
+            });
+            await worker.setParameters({
+                tessedit_pageseg_mode: '3', // Fully automatic page segmentation
+            });
+            
+            for (let i = startPage; i <= endPage; i++) {
+                pagesScanned++;
+                accordion.innerHTML = `<div style="padding: 20px; color: var(--accent-violet); text-align: center;">Scanning page ${i} (Progress: ${pagesScanned} of ${totalPagesToScan}) using Advanced OCR...</div>`;
+                const page = await pdf.getPage(i);
+                
+                // Increase scale for better OCR accuracy
+                const viewport = page.getViewport({ scale: scale * 1.5 });
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                
+                // Advanced Image Preprocessing
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                for (let p = 0; p < data.length; p += 4) {
+                    const avg = (data[p] * 0.299 + data[p + 1] * 0.587 + data[p + 2] * 0.114);
+                    // Binarization (thresholding)
+                    const color = avg > 150 ? 255 : 0;
+                    data[p] = color;
+                    data[p + 1] = color;
+                    data[p + 2] = color;
                 }
-
-                const totalPagesToScan = endPage - startPage + 1;
-                let pagesScanned = 0;
-
-                // create a temporary canvas
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                // Initialize Tesseract worker
-                const worker = await Tesseract.createWorker('eng');
-
-                for (let i = startPage; i <= endPage; i++) {
-                    pagesScanned++;
-                    accordion.innerHTML = `<div style="padding: 20px; color: var(--accent-violet); text-align: center;">Scanning page ${i} (Progress: ${pagesScanned} of ${totalPagesToScan}) using OCR...</div>`;
-                    const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 }); // Good balance of speed/accuracy
-
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-
-                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-                    // Run OCR
-                    const ret = await worker.recognize(canvas);
-                    fullText += ret.data.text + "\n";
-                }
-
-                await worker.terminate();
+                ctx.putImageData(imageData, 0, 0);
+                
+                const ret = await worker.recognize(canvas);
+                fullText += ret.data.text + "\n";
             }
-
-            // Call AI to generate sections
-            if (window.generateStudyPlan) {
-                await window.generateStudyPlan(fullText, file.name);
-            }
-
-        } catch (error) {
-            console.error("PDF Processing Error", error);
-            accordion.innerHTML = '<div style="padding: 20px; color: var(--accent-rose); text-align: center;">Error extracting PDF text. Please ensure the file is not corrupted or password protected.</div>';
+            
+            await worker.terminate();
         }
-    } else {
-        alert("Please upload a valid PDF file.");
+        
+        // Call AI to generate sections
+        if (window.generateStudyPlan) {
+            await window.generateStudyPlan(fullText, filename);
+        }
+    } catch (error) {
+        console.error("PDF Processing Error", error);
+        accordion.innerHTML = '<div style="padding: 20px; color: var(--accent-rose); text-align: center;">Error extracting PDF text. Please ensure the file is not corrupted or password protected.</div>';
     }
 }
 
@@ -132,6 +185,26 @@ window.renderAccordionSections = function () {
         container.innerHTML = '<div style="padding: 20px; color: var(--text-muted); text-align: center;">Upload a PDF to generate a study plan.</div>';
         return;
     }
+
+    const globalActions = document.createElement('div');
+    globalActions.style.display = 'flex';
+    globalActions.style.flexDirection = 'column';
+    globalActions.style.gap = '10px';
+    globalActions.style.marginBottom = '20px';
+    
+    let topRow = '<div style="display:flex; gap:10px;">';
+    topRow += `<button class="btn-action primary" style="flex:1; padding: 12px; font-size: 1rem; box-shadow: 0 4px 15px rgba(6, 182, 212, 0.2);" onclick="window.openGlobalCustomModal('exam')">📝 New Custom Exam</button>`;
+    if (doc.customExam && doc.customExam.questions && doc.customExam.questions.length > 0) {
+        topRow += `<button class="btn-action" style="flex:1; padding: 12px; font-size: 1rem; background: rgba(16,185,129,0.2); color: var(--accent-emerald); border: 1px solid rgba(16,185,129,0.3);" onclick="window.retakeCustomExam()">✅ Retake Saved Exam</button>`;
+    }
+    topRow += '</div>';
+
+    let bottomRow = '<div style="display:flex; gap:10px;">';
+    bottomRow += `<button class="btn-action primary" style="flex:1; padding: 12px; font-size: 1rem; background: rgba(139, 92, 246, 0.2); color: var(--accent-violet); border: 1px solid rgba(139, 92, 246, 0.5);" onclick="window.openGlobalCustomModal('flashcard')">🃏 Generate Custom Flashcards</button>`;
+    bottomRow += '</div>';
+
+    globalActions.innerHTML = topRow + bottomRow;
+    container.appendChild(globalActions);
 
     doc.sections.forEach((sec, idx) => {
         const item = document.createElement('div');
@@ -153,7 +226,13 @@ window.renderAccordionSections = function () {
 
         item.innerHTML = `
             <div class="accordion-header" onclick="toggleAccordion(this)">
-                <span><span class="acc-num">${idx + 1}</span> ${sec.title}</span>
+                <span style="display:flex; align-items:center; gap: 8px;">
+                    <input type="checkbox" ${sec.isStudied ? 'checked' : ''} 
+                           onclick="event.stopPropagation(); window.toggleStudied(this, '${sec.title.replace(/'/g, "\\'")}')" 
+                           title="Mark as studied"
+                           style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-cyan);">
+                    <span><span class="acc-num">${idx + 1}</span> ${sec.title}</span>
+                </span>
                 <span class="header-right"><span class="progress-badge" style="${badgeStyle}">${badgeText}</span> ${idx === 0 ? '⌃' : '⌄'}</span>
             </div>
             <div class="accordion-content">
@@ -187,3 +266,13 @@ window.renderAccordionSections = function () {
         container.appendChild(item);
     });
 }
+
+window.toggleStudied = function(checkbox, secTitle) {
+    const doc = window.getActiveDoc ? window.getActiveDoc() : null;
+    if (!doc || !doc.sections) return;
+    const sec = doc.sections.find(s => s.title === secTitle);
+    if (sec) {
+        sec.isStudied = checkbox.checked;
+        if (typeof saveDb === 'function') saveDb();
+    }
+};

@@ -532,3 +532,100 @@ window.hideLoadingScreen = function() {
         progressFill.style.width = '0%';
     }, 300);
 }
+
+// Settings Modal Logic
+window.openApiSettingsModal = function() {
+    window.renderApiKeysList();
+    window.openModal('api-settings-modal');
+}
+
+window.renderApiKeysList = function() {
+    const listEl = document.getElementById('api-keys-list');
+    if (!listEl) return;
+    
+    // Using global GEMINI_API_KEYS from ai.js
+    if (!window.GEMINI_API_KEYS || window.GEMINI_API_KEYS.length === 0 || (window.GEMINI_API_KEYS.length === 1 && window.GEMINI_API_KEYS[0] === "")) {
+        listEl.innerHTML = '<div style="color:var(--text-muted); font-size: 0.85rem;">No API keys added yet.</div>';
+        return;
+    }
+
+    listEl.innerHTML = '';
+    window.GEMINI_API_KEYS.forEach((key, index) => {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        item.style.padding = '10px';
+        item.style.background = 'rgba(255,255,255,0.03)';
+        item.style.border = '1px solid var(--border-medium)';
+        item.style.borderRadius = '6px';
+        
+        const keyDisplay = document.createElement('div');
+        keyDisplay.style.fontFamily = 'monospace';
+        keyDisplay.style.fontSize = '0.85rem';
+        keyDisplay.innerText = key.length > 15 ? key.substring(0, 10) + '...' + key.substring(key.length - 4) : key;
+        
+        const btnGroup = document.createElement('div');
+        btnGroup.style.display = 'flex';
+        btnGroup.style.gap = '8px';
+        
+        const testBtn = document.createElement('button');
+        testBtn.innerText = 'Test';
+        testBtn.className = 'btn-dark-pill';
+        testBtn.onclick = () => window.handleTestApiKey(key, index);
+        
+        const delBtn = document.createElement('button');
+        delBtn.innerText = 'Delete';
+        delBtn.className = 'btn-dark-pill';
+        delBtn.style.color = 'var(--accent-rose)';
+        delBtn.onclick = () => window.handleRemoveApiKey(index);
+        
+        btnGroup.appendChild(testBtn);
+        btnGroup.appendChild(delBtn);
+        
+        item.appendChild(keyDisplay);
+        item.appendChild(btnGroup);
+        
+        listEl.appendChild(item);
+    });
+}
+
+window.handleAddApiKey = function() {
+    const input = document.getElementById('new-api-key-input');
+    const resultEl = document.getElementById('api-key-test-result');
+    const val = input.value.trim();
+    if (!val) return;
+    
+    if (window.addApiKey(val)) {
+        input.value = '';
+        window.renderApiKeysList();
+        resultEl.innerText = "Key added successfully.";
+        resultEl.style.color = "var(--accent-emerald)";
+    } else {
+        resultEl.innerText = "Key already exists.";
+        resultEl.style.color = "var(--accent-rose)";
+    }
+}
+
+window.handleRemoveApiKey = function(index) {
+    if (confirm("Remove this API key?")) {
+        window.removeApiKey(index);
+        window.renderApiKeysList();
+        document.getElementById('api-key-test-result').innerText = '';
+    }
+}
+
+window.handleTestApiKey = async function(key, index) {
+    const resultEl = document.getElementById('api-key-test-result');
+    resultEl.innerText = `Testing key #${index + 1}...`;
+    resultEl.style.color = "var(--text-secondary)";
+    
+    const res = await window.testApiKey(key);
+    if (res.success) {
+        resultEl.innerText = `Key #${index + 1} is working correctly!`;
+        resultEl.style.color = "var(--accent-emerald)";
+    } else {
+        resultEl.innerText = `Key #${index + 1} failed: ${res.message}`;
+        resultEl.style.color = "var(--accent-rose)";
+    }
+}
