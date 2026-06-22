@@ -114,7 +114,7 @@ window.addCardFromSelection = async function () {
     contentDiv.innerHTML = '<div style="color:var(--accent-active)">Generating flashcard...</div>';
 
     const messages = [
-        { role: "system", content: "Create a single flashcard from this sentence. Return JSON: {\"front\": \"Question\", \"back\": \"Answer\"}" },
+        { role: "system", content: "Create a single flashcard from this sentence tailored for medical students. Follow medical flashcard rules (Minimum Information Principle, Mnemonic Hints). Choose the MOST APPROPRIATE format from: Basic, Cloze with {{c1::Answer}}, Image Occlusion, Comparison, Mechanism/Pathway. Return JSON: {\"front\": \"Question\", \"back\": \"Answer\"}" },
         { role: "user", content: `Sentence: "${currentSelection}"` }
     ];
 
