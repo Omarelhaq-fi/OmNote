@@ -69,7 +69,7 @@ function startTimer(mode) {
         pomoTimeLeft--;
 
         if (pomoState === 'work') {
-            trackStudyTime(1);
+            window.trackStudyTime(1);
         }
 
         if (pomoTimeLeft <= 0) {
@@ -87,7 +87,7 @@ function startTimer(mode) {
     }, 1000);
 }
 
-function trackStudyTime(seconds) {
+window.trackStudyTime = function(seconds) {
     if (!db.studyStats) db.studyStats = {};
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];

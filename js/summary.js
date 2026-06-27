@@ -27,7 +27,7 @@ function handleTextSelection(e) {
 function isSelectionInsideSummary(selection) {
     let node = selection.anchorNode;
     while (node && node.nodeName !== 'BODY') {
-        if (node.id === 'summary-content') return true;
+        if (node.id === 'summary-content' || (node.classList && node.classList.contains('review-modal-content'))) return true;
         node = node.parentNode;
     }
     return false;
@@ -93,7 +93,6 @@ window.explainText = async function () {
         { role: "user", content: `Sentence: "${currentSelection}"` }
     ];
 
-    // Check if callFastGroqAPI is available
     if (typeof callFastGroqAPI !== 'undefined') {
         const reply = await callFastGroqAPI(messages, false);
         if (reply) {
@@ -104,11 +103,45 @@ window.explainText = async function () {
     }
 }
 
+window.docExplainText = async function () {
+    if (!currentSelection) return;
+    
+    const textToExplain = currentSelection; // Save it before hidePopover clears it
+
+    hidePopover(); // Hide the selection menu
+
+    if (typeof window.openModal === 'function') {
+        window.openModal('doc-explain-modal');
+    } else {
+        const m = document.getElementById('doc-explain-modal');
+        if (m) m.style.display = 'flex';
+    }
+
+    const contentDiv = document.getElementById('doc-explain-modal-content');
+    contentDiv.innerHTML = '<div style="color:var(--accent-active); text-align: center; margin-top: 20px;">جاري التحليل كطبيب استشاري...</div>';
+
+    const messages = [
+        { role: "system", content: "You are a friendly senior Egyptian doctor explaining medical concepts to a medical student. Your ONLY task is to explain the specific sentence provided by the user. Do NOT explain unrelated topics. Explain the provided sentence in simple Egyptian Arabic, but keep all medical terms in English. To make studying easier, structure your response with these sections: 1) <strong>المعنى ببساطة:</strong> A simple explanation. 2) <strong>تشبيه من الحياة:</strong> A clever real-life analogy (تشبيه بلدي). 3) <strong>عشان تفتكرها (بصمجة):</strong> A funny or clever memory trick/mnemonic to memorize it for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
+        { role: "user", content: `Sentence to explain: "${textToExplain}"` }
+    ];
+
+    if (typeof callGroqAPI !== 'undefined') {
+        const reply = await callGroqAPI(messages, false);
+        if (reply && !reply._error) {
+            // Remove markdown code blocks if any
+            let cleanReply = reply.replace(/```html/gi, '').replace(/```/g, '').trim();
+            contentDiv.innerHTML = cleanReply;
+        } else {
+            contentDiv.innerHTML = '<div style="color:red; text-align: center;">حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.</div>';
+        }
+    }
+}
+
 window.addCardFromSelection = async function () {
     if (!currentSelection) return;
 
     document.querySelectorAll('.popover-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.popover-btn')[1].classList.add('active');
+    document.querySelectorAll('.popover-btn')[2].classList.add('active'); // Index 2 is Add Card
 
     const contentDiv = document.getElementById('popover-content');
     contentDiv.innerHTML = '<div style="color:var(--accent-active)">Generating flashcard...</div>';
@@ -175,6 +208,15 @@ window.tabletExplain = function() {
     popoverActive = true;
     
     window.explainText();
+};
+
+window.tabletDocExplain = function() {
+    const text = window.getSelection().toString().trim();
+    if (!text || text.length < 5) return alert('Please select some text first.');
+    currentSelection = text;
+    
+    // We don't need to show the popover since docExplainText handles its own modal now
+    window.docExplainText();
 };
 
 window.highlightSelection = function() {

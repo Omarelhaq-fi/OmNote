@@ -102,7 +102,7 @@ window.renderRems = function () {
 
         // Render flashcard text with highlighting
         if (rem.isFlashcard && rem.front && rem.back) {
-            input.innerHTML = `<span style="color: var(--text-primary)">${escapeHtml(rem.front)}</span><span style="color: var(--accent-amber); font-weight: 600;"> == </span><span style="color: var(--accent-cyan)">${escapeHtml(rem.back)}</span>`;
+            input.innerHTML = `<span style="color: var(--text-primary); white-space: pre-wrap;">${escapeHtml(rem.front)}</span><span style="color: var(--accent-amber); font-weight: 600;"> == </span><span style="color: var(--accent-cyan); white-space: pre-wrap;">${escapeHtml(rem.back)}</span>`;
         } else {
             input.textContent = rem.text;
         }
@@ -139,7 +139,7 @@ window.renderRems = function () {
             }
             // Re-render flashcard highlighting
             if (rem.isFlashcard && rem.front && rem.back) {
-                input.innerHTML = `<span style="color: var(--text-primary)">${escapeHtml(rem.front)}</span><span style="color: var(--accent-amber); font-weight: 600;"> == </span><span style="color: var(--accent-cyan)">${escapeHtml(rem.back)}</span>`;
+                input.innerHTML = `<span style="color: var(--text-primary); white-space: pre-wrap;">${escapeHtml(rem.front)}</span><span style="color: var(--accent-amber); font-weight: 600;"> == </span><span style="color: var(--accent-cyan); white-space: pre-wrap;">${escapeHtml(rem.back)}</span>`;
             }
         });
 
@@ -245,7 +245,7 @@ window.startChunkReview = function (topic) {
     if (!activeDocId) return;
     
     // For single chunk review, we practice all flashcards generated for this topic, regardless of nextReview date
-    reviewQueue = db.rems.filter(r => r.isFlashcard && r.docId === activeDocId && r.topic === topic);
+    reviewQueue = db.rems.filter(r => r.isFlashcard && r.docId === activeDocId && (r.topic === topic || (r.topic && r.topic.includes(topic))));
 
     if (reviewQueue.length === 0) {
         alert("No flashcards found for this section! Generate them first.");
@@ -278,6 +278,8 @@ function showReviewCard() {
 
     document.getElementById('btn-show-answer').style.display = 'block';
     document.getElementById('srs-buttons').style.display = 'none';
+    const docExplainBtn = document.getElementById('btn-doc-explain-card');
+    if (docExplainBtn) docExplainBtn.style.display = 'none';
 
     // Show source if available
     const sourcesBlock = document.getElementById('card-sources-block');
@@ -294,6 +296,9 @@ window.showAnswer = function () {
     document.getElementById('card-back').style.display = 'inline';
     document.getElementById('btn-show-answer').style.display = 'none';
     document.getElementById('srs-buttons').style.display = 'flex';
+    
+    const docExplainBtn = document.getElementById('btn-doc-explain-card');
+    if (docExplainBtn) docExplainBtn.style.display = 'block';
 
     // Show sources if available
     const card = reviewQueue[currentReviewIdx];
@@ -340,6 +345,45 @@ window.submitReview = function (rating) {
 
     currentReviewIdx++;
     showReviewCard();
+};
+
+window.explainCurrentFlashcard = function() {
+    const card = reviewQueue[currentReviewIdx];
+    if (!card) return;
+    
+    let textToExplain = card.front + " ➔ " + card.back;
+    
+    // Check if the user has selected specific text
+    const selection = window.getSelection().toString().trim();
+    if (selection.length > 0) {
+        textToExplain = selection;
+    }
+    
+    if (typeof window.openModal === 'function') {
+        window.openModal('doc-explain-modal');
+    } else {
+        const m = document.getElementById('doc-explain-modal');
+        if (m) m.style.display = 'flex';
+    }
+
+    const contentDiv = document.getElementById('doc-explain-modal-content');
+    contentDiv.innerHTML = '<div style="color:var(--accent-active); text-align: center; margin-top: 20px;">جاري التحليل كطبيب استشاري...</div>';
+
+    const messages = [
+        { role: "system", content: "You are a friendly senior Egyptian doctor explaining medical concepts to a medical student. Your ONLY task is to explain the specific sentence provided by the user. Do NOT explain unrelated topics. Explain the provided sentence in simple Egyptian Arabic, but keep all medical terms in English. To make studying easier, structure your response with these sections: 1) <strong>المعنى ببساطة:</strong> A simple explanation. 2) <strong>تشبيه من الحياة:</strong> A clever real-life analogy (تشبيه بلدي). 3) <strong>عشان تفتكرها (بصمجة):</strong> A funny or clever memory trick/mnemonic to memorize it for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
+        { role: "user", content: `Concept to explain: "${textToExplain}"` }
+    ];
+
+    if (typeof callGroqAPI !== 'undefined') {
+        callGroqAPI(messages, false).then(reply => {
+            if (reply && !reply._error) {
+                let cleanReply = reply.replace(/```html/gi, '').replace(/```/g, '').trim();
+                contentDiv.innerHTML = cleanReply;
+            } else {
+                contentDiv.innerHTML = '<div style="color:red; text-align: center;">حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.</div>';
+            }
+        });
+    }
 };
 
 // ============================================================

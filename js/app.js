@@ -119,12 +119,21 @@ window.deleteDocument = function (docId) {
     db.documents = db.documents.filter(d => d.id !== docId);
     db.rems = db.rems.filter(r => r.docId !== docId);
 
-    if (db.documents.length === 0) {
-        window.createNewDocument();
-    } else {
-        window.switchDocument(db.documents[0].id);
-    }
     saveDb();
+
+    if (activeDocId === docId) {
+        if (db.documents.length === 0) {
+            window.createNewDocument();
+        } else {
+            window.switchDocument(db.documents[0].id);
+        }
+    } else {
+        if (!activeDocId) {
+            window.showHomeView();
+        } else {
+            refreshAppUI();
+        }
+    }
 }
 
 window.createNewSubject = function () {
@@ -194,8 +203,11 @@ window.showHomeView = function () {
 
                     card.innerHTML = `
                         ${dueBadge}
-                        <div class="doc-card-title">📄 ${doc.title}</div>
-                        <div class="doc-card-meta">Created: ${new Date(doc.created).toLocaleDateString()}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div class="doc-card-title" style="margin-bottom: 0;">📄 ${doc.title}</div>
+                            <button onclick="event.stopPropagation(); window.deleteDocument('${doc.id}');" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem; padding: 0 0 0 10px;" title="Delete Document">🗑️</button>
+                        </div>
+                        <div class="doc-card-meta" style="margin-top: 8px;">Created: ${new Date(doc.created).toLocaleDateString()}</div>
                     `;
                     grid.appendChild(card);
                 });
@@ -417,6 +429,89 @@ window.addEventListener('DOMContentLoaded', () => {
         initApp(null);
     }
 });
+
+// CSV Upload Logic
+window.handleCsvUpload = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        
+        const parseCSV = (str) => {
+            const result = [];
+            let row = [];
+            let inQuotes = false;
+            let val = '';
+            for (let i = 0; i < str.length; i++) {
+                const char = str[i];
+                if (char === '"') {
+                    if (inQuotes && str[i+1] === '"') {
+                        val += '"'; // escaped quote
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === '|' && !inQuotes) {
+                    row.push(val);
+                    val = '';
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (char === '\r' && str[i+1] === '\n') i++;
+                    row.push(val);
+                    result.push(row);
+                    row = [];
+                    val = '';
+                } else {
+                    val += char;
+                }
+            }
+            if (val || row.length > 0) {
+                row.push(val);
+                result.push(row);
+            }
+            return result;
+        };
+
+        const rows = parseCSV(text);
+        
+        const docId = generateId();
+        const subjectId = db.subjects && db.subjects.length > 0 ? db.subjects[0].id : 's1';
+        const docTitle = file.name.replace('.csv', '');
+        
+        db.documents.push({ id: docId, title: docTitle, created: Date.now(), pdfContextText: "", sections: [], subjectId });
+        
+        let count = 0;
+        rows.forEach(parts => {
+            // Filter empty rows
+            if (parts.length === 1 && !parts[0].trim()) return;
+            
+            if (parts.length >= 2) {
+                const front = parts[0].trim();
+                const back = parts.slice(1).join('|').trim();
+                if (front || back) {
+                    window.addRem(docId, `${front} == ${back}`, 0);
+                    count++;
+                }
+            } else if (parts.length === 1) {
+                // Just a note
+                if (parts[0].trim()) {
+                    window.addRem(docId, parts[0].trim(), 0);
+                    count++;
+                }
+            }
+        });
+        
+        if (count === 0) {
+            window.addRem(docId, "No valid flashcards found in CSV.", 0);
+        }
+        
+        saveDb();
+        window.switchDocument(docId);
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
 
 // Auth Logic
 window.openAuthModal = function () {
