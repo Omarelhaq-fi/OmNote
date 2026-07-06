@@ -147,6 +147,7 @@
 
                 <button class="btn-icon" onclick="window.toggleRightPane()" title="Toggle Sidebar" style="font-size: 1.1rem;">◨</button>
                 <button class="btn-icon" onclick="window.toggleFullScreen()" title="Full Screen" style="font-size: 1.1rem;">⛶</button>
+                <button class="btn-icon" onclick="window.toggleAppTheme()" title="Toggle Light/Dark Mode" id="theme-toggle-btn" style="font-size: 1.1rem;">☀️</button>
                 <button class="btn-icon" onclick="window.openApiSettingsModal()" title="Global Settings" style="font-size: 1.1rem;">⚙️</button>
 
                 <button class="btn-logout" onclick="window.handleLogout()">Log Out</button>
@@ -211,6 +212,7 @@
                                 style="font-size: 1.05rem; font-weight: 700; display:flex; align-items:center; gap:8px;">📑
                                 Read Summary</span>
                             <div class="summary-toggles">
+                                <button id="btn-explain-summary" class="toggle-btn" style="display: none; border-color: rgba(139, 92, 246, 0.5); color: var(--accent-violet);" onclick="window.explainCurrentSummary()">👨‍⚕️ Doc Explain Summary</button>
                                 <button id="btn-regenerate-summary" class="toggle-btn" style="display: none;" onclick="window.regenerateCurrentSummary()">Regenerate</button>
                                 <button class="toggle-btn">Compact</button>
                                 <button class="toggle-btn active">Detailed</button>
@@ -271,83 +273,146 @@
             </div>
         </div>
 
-        <!-- Review Modal -->
-        <div id="review-modal" class="modal">
-            <div class="review-modal-content">
+        <!-- Full-Screen Flashcard Viewer (USMLE Style Light Mode) -->
+        <div id="review-modal" class="usmle-fullscreen" style="display:none;">
+            <!-- Top Bar -->
+            <div class="usmle-topbar">
+                <div class="usmle-topbar-left">
+                    <span class="usmle-item-info">Flashcard <span id="review-count">1</span></span>
+                    <span class="usmle-block-info">📄 <span id="review-doc-title">Document</span></span>
+                </div>
+                <div class="usmle-topbar-center">
+                    <button class="usmle-nav-btn" onclick="window.reviewNavPrev()" title="Previous">◀ Previous</button>
+                    <span class="usmle-nav-counter" id="review-nav-counter">1 / 1</span>
+                    <button class="usmle-nav-btn" onclick="window.reviewNavNext()" title="Next">Next ▶</button>
+                </div>
+                <div class="usmle-topbar-right">
+                    <button class="usmle-tool-btn" onclick="window.explainCurrentFlashcard()" id="btn-doc-explain-card" style="display:none;">👨‍⚕️ Explain</button>
+                    <button class="usmle-tool-btn" onclick="closeFullscreen('review-modal')">✕ Exit</button>
+                </div>
+            </div>
 
-                <!-- Top Pill Header -->
-                <div style="display:flex; justify-content: center; margin-bottom: 20px; position:relative;">
-                    <div class="review-pill">
-                        <span id="review-count">1</span> Flashcards in
-                        <span style="border: 1px solid var(--border-medium); border-radius: 4px; padding: 2px 8px; font-size: 0.8rem;">Active
-                            Document</span>
-                    </div>
-                    <button class="review-close-btn" onclick="closeModal('review-modal')">✕</button>
+            <div class="usmle-body">
+                <!-- Left Sidebar: Card Number List -->
+                <div class="usmle-sidebar" id="review-sidebar">
+                    <!-- Populated by JS -->
                 </div>
 
-                <!-- Main Content Area -->
-                <div style="padding: 20px; min-height: 250px;">
-                    <div style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 10px;">📄 Uploaded Files > <span
-                            id="review-doc-title">Document</span></div>
-                    <div style="font-weight: 700; margin-bottom: 10px;">Study Topic</div>
-                    <div style="display:flex; gap: 10px; margin-bottom: 20px;">
-                        <div style="color: var(--text-dim); font-size: 1.2rem;">•</div>
-                        <div style="line-height: 1.6; width: 100%;">
-                            <span id="card-front" style="font-size: 1.1rem; white-space: pre-wrap; display: inline-block; width: 100%;">Question</span>
-                            <span id="card-back"
-                                style="font-size: 1.1rem; color: var(--text-secondary); margin-left: 5px; display:none; white-space: pre-wrap; width: 100%; margin-top: 10px;"> ➔ Answer</span>
+                <!-- Main Content -->
+                <div class="usmle-content">
+                    <div class="usmle-question-area">
+                        <!-- Mark flag -->
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom: 16px;">
+                            <button class="usmle-flag-btn" id="review-flag-btn" onclick="window.toggleReviewFlag()" title="Mark Card">🚩 Mark Card</button>
+                        </div>
+
+                        <!-- Question text -->
+                        <div class="usmle-question-text" id="card-front">Question</div>
+
+                        <!-- Answer options / Revealed answer -->
+                        <div id="card-back" class="usmle-answer-reveal" style="display:none;">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <button class="usmle-show-answer-btn" id="btn-show-answer" onclick="showAnswer()">Show Answer</button>
+
+                        <!-- Sources Block -->
+                        <div id="card-sources-block" class="usmle-sources-block" style="display:none;">
+                            <div class="usmle-sources-header">📚 Source</div>
+                            <div class="sources-quote" id="card-source-text">Source text here...</div>
                         </div>
                     </div>
 
-                    <button class="btn-show-answer" id="btn-show-answer" onclick="showAnswer()">Show Answer</button>
-                    <button class="btn-action" id="btn-doc-explain-card" style="display:none; margin-bottom:10px; width:100%; background: rgba(139, 92, 246, 0.2); color: var(--accent-violet); border: 1px solid rgba(139, 92, 246, 0.5); font-size: 1rem; padding: 12px;" onclick="window.explainCurrentFlashcard()">👨‍⚕️ Doc Explain</button>
-
-                    <!-- Sources Block -->
-                    <div id="card-sources-block" class="sources-block" style="display:none;">
-                        <div class="sources-header">Sources</div>
-                        <div class="sources-body">
-                            <div class="sources-quote" id="card-source-text">
-                                Source text here...
-                            </div>
-                        </div>
+                    <!-- Bottom SRS Actions -->
+                    <div class="usmle-action-bar" id="srs-buttons" style="display:none;">
+                        <button class="usmle-proceed-btn usmle-btn-disable" onclick="submitReview('disable')">🗑️ Disable Card</button>
+                        <button class="usmle-proceed-btn usmle-btn-forgot" onclick="submitReview('forgot')">✕ Forgot</button>
+                        <button class="usmle-proceed-btn usmle-btn-easy" onclick="submitReview('easy')">✓ Remembered</button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Bottom Actions -->
-                <div class="srs-buttons" id="srs-buttons" style="display:none;">
-                    <button class="srs-action-btn" onclick="submitReview('disable')">
-                        <span class="srs-emoji">🗑️</span> Disable Card
-                    </button>
-                    <button class="srs-action-btn" onclick="submitReview('forgot')">
-                        <span class="srs-emoji" style="color: var(--accent-rose);">✕</span> Forgot
-                    </button>
-                    <button class="srs-action-btn" onclick="submitReview('easy')">
-                        <span class="srs-emoji">😄</span> Remembered
-                    </button>
+            <!-- Bottom Status Bar -->
+            <div class="usmle-statusbar">
+                <span id="review-status-text">Press Space to reveal answer</span>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <span style="font-size:0.8rem;">1=Disable &nbsp; 2=Forgot &nbsp; 3=Remembered</span>
                 </div>
-
             </div>
         </div>
 
-        <!-- Exam Modal -->
-        <div id="exam-modal" class="modal">
-            <div class="exam-modal-content">
-                <button class="exam-close-btn" onclick="closeModal('exam-modal')">✕</button>
-                <div class="exam-title">Hard Exam Simulation</div>
-                <div id="exam-modal-content">
-                    <!-- Exam questions rendered here -->
+        <!-- Full-Screen Exam Viewer (USMLE Style Light Mode) -->
+        <div id="exam-modal" class="usmle-fullscreen" style="display:none;">
+            <!-- Top Bar -->
+            <div class="usmle-topbar">
+                <div class="usmle-topbar-left">
+                    <span class="usmle-item-info">Item <span id="exam-current-num">1</span> of <span id="exam-total-num">0</span></span>
+                    <span class="usmle-block-info">Block: <span id="exam-block-info">1 of 1</span></span>
                 </div>
-                <button class="exam-finish-btn" onclick="closeModal('exam-modal')">Finish Exam</button>
+                <div class="usmle-topbar-center">
+                    <button class="usmle-nav-btn" onclick="window.examNavPrev()" title="Previous">◀ Previous</button>
+                    <span class="usmle-nav-counter" id="exam-nav-counter">1 / 1</span>
+                    <button class="usmle-nav-btn" onclick="window.examNavNext()" title="Next">Next ▶</button>
+                </div>
+                <div class="usmle-topbar-right">
+                    <button class="usmle-tool-btn" id="exam-tools-btn">🧪 Lab Values</button>
+                    <button class="usmle-tool-btn">📝 Notes</button>
+                    <button class="usmle-tool-btn" onclick="closeFullscreen('exam-modal')">✕ End Block</button>
+                </div>
+            </div>
+
+            <div class="usmle-body">
+                <!-- Left Sidebar: Question Number List -->
+                <div class="usmle-sidebar" id="exam-sidebar">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Main Content -->
+                <div class="usmle-content">
+                    <div class="usmle-question-area" id="exam-modal-content">
+                        <!-- Exam questions rendered by JS -->
+                    </div>
+
+                    <!-- Bottom Proceed Bar -->
+                    <div class="usmle-action-bar">
+                        <button class="usmle-proceed-btn" onclick="window.examNavNext()">Proceed to Next Item</button>
+                        <button class="usmle-proceed-btn usmle-btn-end" onclick="closeFullscreen('exam-modal')">End Block</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Status Bar -->
+            <div class="usmle-statusbar">
+                <span id="exam-timer-display">⏱ Time Remaining: --:--:--</span>
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button class="usmle-flag-btn" id="exam-flag-btn" onclick="window.toggleExamFlag()">🚩 Mark Question</button>
+                </div>
             </div>
         </div>
 
-        <!-- Doc Explain Modal -->
-        <div id="doc-explain-modal" class="modal">
-            <div class="exam-modal-content" style="max-width: 600px; text-align: right; direction: rtl;">
-                <button class="exam-close-btn" style="left: 10px; right: auto;" onclick="closeModal('doc-explain-modal')">✕</button>
-                <div class="exam-title" style="margin-bottom: 20px;">👨‍⚕️ شرح الدكتور</div>
-                <div id="doc-explain-modal-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
-                    <!-- Explanation goes here -->
+        <!-- Doc Explain Modal (USMLE Fullscreen Style) -->
+        <div id="doc-explain-modal" class="usmle-fullscreen" style="display:none;">
+            <!-- Top Bar -->
+            <div class="usmle-topbar">
+                <div class="usmle-topbar-left">
+                    <span class="usmle-item-info">👨‍⚕️ Doctor's Explanation</span>
+                </div>
+                <div class="usmle-topbar-center">
+                </div>
+                <div class="usmle-topbar-right">
+                    <button class="usmle-tool-btn" onclick="closeFullscreen('doc-explain-modal')">✕ Close</button>
+                </div>
+            </div>
+
+            <div class="usmle-body">
+                <!-- Main Content (Aligned right for RTL reading) -->
+                <div class="usmle-content" style="display: flex; justify-content: flex-start; padding-top: 60px; padding-bottom: 60px; direction: rtl; padding-right: 5%;">
+                    <div class="usmle-question-area" id="doc-explain-modal-container" style="max-width: 900px; width: 100%; text-align: right; background: transparent; border: none; box-shadow: none;">
+                        <div class="exam-title" style="margin-bottom: 30px; font-size: 1.8rem; border-bottom: 2px solid var(--border-medium); padding-bottom: 10px;">👨‍⚕️ شرح الدكتور</div>
+                        <div id="doc-explain-modal-content" class="engaging-reading markdown-body" style="font-size: 1.15rem; line-height: 1.9; direction: rtl;">
+                            <!-- Explanation goes here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -537,7 +602,19 @@
             const user = auth.currentUser;
             if (user) {
                 try {
-                    await database.ref('omnote_data/master/users/' + user.uid + '/data').set(dbObj);
+                    const cache = new Set();
+                    const safeStr = JSON.stringify(dbObj, (key, value) => {
+                        if (typeof value === 'object' && value !== null) {
+                            if (cache.has(value)) {
+                                return; // Circular reference found, discard key
+                            }
+                            cache.add(value);
+                        }
+                        return value;
+                    });
+                    const safeDb = JSON.parse(safeStr);
+                    
+                    await database.ref('omnote_data/master/users/' + user.uid + '/data').set(safeDb);
                 } catch (e) {
                     console.error("Firebase sync error", e);
                     alert("Firebase Error: " + e.message + "\nYour database rules might be blocking writes.");
