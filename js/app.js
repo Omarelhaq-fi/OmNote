@@ -724,3 +724,24 @@ window.handleTestApiKey = async function(key, index) {
         resultEl.style.color = "var(--accent-rose)";
     }
 }
+
+// ============================================================
+// Global Theme Toggle Logic (Light / Dark Mode)
+// ============================================================
+window.toggleAppTheme = function() {
+    document.body.classList.toggle('app-light-mode');
+    const isLight = document.body.classList.contains('app-light-mode');
+    localStorage.setItem('omnote_theme', isLight ? 'light' : 'dark');
+    
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) btn.innerText = isLight ? '🌙' : '☀️';
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    const theme = localStorage.getItem('omnote_theme');
+    if (theme === 'light') {
+        document.body.classList.add('app-light-mode');
+        const btn = document.getElementById('theme-toggle-btn');
+        if (btn) btn.innerText = '🌙';
+    }
+});

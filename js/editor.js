@@ -225,6 +225,17 @@ window.renderRems = function () {
 // ============================================================
 let reviewQueue = [];
 let currentReviewIdx = 0;
+let reviewFlaggedSet = new Set();
+
+// Open / close the USMLE full-screen overlay
+window.openFullscreen = function(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'flex';
+};
+window.closeFullscreen = function(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+};
 
 window.startReview = function () {
     if (!activeDocId) return;
@@ -236,15 +247,16 @@ window.startReview = function () {
         return;
     }
 
+    reviewFlaggedSet = new Set();
     currentReviewIdx = 0;
+    buildReviewSidebar();
     showReviewCard();
-    window.openModal('review-modal');
+    window.openFullscreen('review-modal');
 };
 
 window.startChunkReview = function (topic) {
     if (!activeDocId) return;
     
-    // For single chunk review, we practice all flashcards generated for this topic, regardless of nextReview date
     reviewQueue = db.rems.filter(r => r.isFlashcard && r.docId === activeDocId && (r.topic === topic || (r.topic && r.topic.includes(topic))));
 
     if (reviewQueue.length === 0) {
@@ -252,14 +264,70 @@ window.startChunkReview = function (topic) {
         return;
     }
 
+    reviewFlaggedSet = new Set();
     currentReviewIdx = 0;
+    buildReviewSidebar();
     showReviewCard();
-    window.openModal('review-modal');
+    window.openFullscreen('review-modal');
 };
+
+function buildReviewSidebar() {
+    const sidebar = document.getElementById('review-sidebar');
+    if (!sidebar) return;
+    sidebar.innerHTML = '';
+    reviewQueue.forEach((card, idx) => {
+        const item = document.createElement('div');
+        item.className = 'usmle-sidebar-item' + (idx === currentReviewIdx ? ' active' : '');
+        item.id = `review-sidebar-item-${idx}`;
+        item.textContent = idx + 1;
+        item.onclick = () => { currentReviewIdx = idx; buildReviewSidebar(); showReviewCard(); };
+        sidebar.appendChild(item);
+    });
+}
+
+function updateReviewSidebarActive() {
+    document.querySelectorAll('.usmle-sidebar-item').forEach((el, idx) => {
+        el.classList.toggle('active', idx === currentReviewIdx);
+        if (reviewFlaggedSet.has(idx)) el.classList.add('flagged');
+        else el.classList.remove('flagged');
+    });
+    // scroll active into view
+    const activeEl = document.getElementById(`review-sidebar-item-${currentReviewIdx}`);
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+}
+
+window.reviewNavPrev = function() {
+    if (currentReviewIdx > 0) {
+        currentReviewIdx--;
+        updateReviewSidebarActive();
+        showReviewCard();
+    }
+};
+
+window.reviewNavNext = function() {
+    if (currentReviewIdx < reviewQueue.length - 1) {
+        currentReviewIdx++;
+        updateReviewSidebarActive();
+        showReviewCard();
+    }
+};
+
+window.toggleReviewFlag = function() {
+    const btn = document.getElementById('review-flag-btn');
+    if (reviewFlaggedSet.has(currentReviewIdx)) {
+        reviewFlaggedSet.delete(currentReviewIdx);
+        if (btn) btn.classList.remove('flagged');
+    } else {
+        reviewFlaggedSet.add(currentReviewIdx);
+        if (btn) btn.classList.add('flagged');
+    }
+    updateReviewSidebarActive();
+};
+
 
 function showReviewCard() {
     if (currentReviewIdx >= reviewQueue.length) {
-        window.closeModal('review-modal');
+        window.closeFullscreen('review-modal');
         alert("Review session complete! 🎉");
         if (typeof refreshAppUI === 'function') refreshAppUI();
         return;
@@ -268,16 +336,38 @@ function showReviewCard() {
     const card = reviewQueue[currentReviewIdx];
     const doc = db.documents.find(d => d.id === card.docId);
 
-    document.getElementById('review-count').textContent = `${currentReviewIdx + 1} / ${reviewQueue.length}`;
-    document.getElementById('review-doc-title').textContent = doc ? doc.title : 'Document';
-    document.getElementById('card-front').textContent = card.front;
+    // Update top bar info
+    const countEl = document.getElementById('review-count');
+    if (countEl) countEl.textContent = currentReviewIdx + 1;
+    const docTitleEl = document.getElementById('review-doc-title');
+    if (docTitleEl) docTitleEl.textContent = doc ? doc.title : 'Document';
+    const navCounter = document.getElementById('review-nav-counter');
+    if (navCounter) navCounter.textContent = `${currentReviewIdx + 1} / ${reviewQueue.length}`;
+    const statusText = document.getElementById('review-status-text');
+    if (statusText) statusText.textContent = 'Press Space to reveal answer';
 
+    // Flag state
+    const flagBtn = document.getElementById('review-flag-btn');
+    if (flagBtn) {
+        flagBtn.classList.toggle('flagged', reviewFlaggedSet.has(currentReviewIdx));
+    }
+
+    // Set question text
+    const frontEl = document.getElementById('card-front');
+    if (frontEl) frontEl.textContent = card.front;
+
+    // Reset answer area
     const backEl = document.getElementById('card-back');
-    backEl.textContent = ' ➔ ' + card.back;
-    backEl.style.display = 'none';
+    if (backEl) {
+        backEl.textContent = card.back;
+        backEl.style.display = 'none';
+    }
 
-    document.getElementById('btn-show-answer').style.display = 'block';
-    document.getElementById('srs-buttons').style.display = 'none';
+    // Reset buttons
+    const showBtn = document.getElementById('btn-show-answer');
+    if (showBtn) showBtn.style.display = 'inline-block';
+    const srsButtons = document.getElementById('srs-buttons');
+    if (srsButtons) srsButtons.style.display = 'none';
     const docExplainBtn = document.getElementById('btn-doc-explain-card');
     if (docExplainBtn) docExplainBtn.style.display = 'none';
 
@@ -285,25 +375,42 @@ function showReviewCard() {
     const sourcesBlock = document.getElementById('card-sources-block');
     const sourceText = document.getElementById('card-source-text');
     if (card.sourceText && card.sourceText.trim()) {
-        sourceText.textContent = card.sourceText;
-        sourcesBlock.style.display = 'none'; // Hidden until answer shown
+        if (sourceText) sourceText.textContent = card.sourceText;
+        if (sourcesBlock) sourcesBlock.style.display = 'none'; // Hidden until answer shown
     } else {
-        sourcesBlock.style.display = 'none';
+        if (sourcesBlock) sourcesBlock.style.display = 'none';
     }
+    
+    // Update sidebar active
+    updateReviewSidebarActive();
 }
 
 window.showAnswer = function () {
-    document.getElementById('card-back').style.display = 'inline';
-    document.getElementById('btn-show-answer').style.display = 'none';
-    document.getElementById('srs-buttons').style.display = 'flex';
+    const card = reviewQueue[currentReviewIdx];
+    if (!card) return;
+
+    // Reveal answer in the styled reveal box
+    const backEl = document.getElementById('card-back');
+    if (backEl) {
+        backEl.textContent = card.back;
+        backEl.style.display = 'block';
+    }
+
+    const showBtn = document.getElementById('btn-show-answer');
+    if (showBtn) showBtn.style.display = 'none';
+    const srsButtons = document.getElementById('srs-buttons');
+    if (srsButtons) srsButtons.style.display = 'flex';
     
     const docExplainBtn = document.getElementById('btn-doc-explain-card');
-    if (docExplainBtn) docExplainBtn.style.display = 'block';
+    if (docExplainBtn) docExplainBtn.style.display = 'inline-flex';
+
+    const statusText = document.getElementById('review-status-text');
+    if (statusText) statusText.textContent = '1 = Disable  |  2 = Forgot  |  3 = Remembered';
 
     // Show sources if available
-    const card = reviewQueue[currentReviewIdx];
-    if (card && card.sourceText && card.sourceText.trim()) {
-        document.getElementById('card-sources-block').style.display = 'block';
+    if (card.sourceText && card.sourceText.trim()) {
+        const sourcesBlock = document.getElementById('card-sources-block');
+        if (sourcesBlock) sourcesBlock.style.display = 'block';
     }
 };
 
@@ -318,20 +425,17 @@ window.submitReview = function (rating) {
 
     switch (rating) {
         case 'disable':
-            // Remove flashcard status
             card.isFlashcard = false;
             card.nextReview = 0;
             break;
         case 'forgot':
-            // Reset — review again in 1 minute
             card.ease = Math.max(1.3, card.ease - 0.2);
             card.interval = 0;
             card.nextReview = now + minute;
             break;
         case 'easy':
-            // Remembered — advance SRS
             if (card.interval === 0) {
-                card.interval = 1; // 1 day
+                card.interval = 1;
             } else {
                 card.interval = Math.round(card.interval * card.ease);
             }
@@ -343,8 +447,19 @@ window.submitReview = function (rating) {
     if (typeof saveDb === 'function') saveDb();
     if (typeof updateSRSQueue === 'function') updateSRSQueue();
 
+    // Mark as answered in sidebar
+    const sidebarItem = document.getElementById(`review-sidebar-item-${currentReviewIdx}`);
+    if (sidebarItem) sidebarItem.classList.add('answered');
+
     currentReviewIdx++;
-    showReviewCard();
+    if (currentReviewIdx >= reviewQueue.length) {
+        window.closeFullscreen('review-modal');
+        alert("Review session complete! 🎉");
+        if (typeof refreshAppUI === 'function') refreshAppUI();
+    } else {
+        updateReviewSidebarActive();
+        showReviewCard();
+    }
 };
 
 window.explainCurrentFlashcard = function() {
@@ -360,7 +475,7 @@ window.explainCurrentFlashcard = function() {
     }
     
     if (typeof window.openModal === 'function') {
-        window.openModal('doc-explain-modal');
+        window.openFullscreen('doc-explain-modal');
     } else {
         const m = document.getElementById('doc-explain-modal');
         if (m) m.style.display = 'flex';
@@ -370,7 +485,7 @@ window.explainCurrentFlashcard = function() {
     contentDiv.innerHTML = '<div style="color:var(--accent-active); text-align: center; margin-top: 20px;">جاري التحليل كطبيب استشاري...</div>';
 
     const messages = [
-        { role: "system", content: "You are a friendly senior Egyptian doctor explaining medical concepts to a medical student. Your ONLY task is to explain the specific sentence provided by the user. Do NOT explain unrelated topics. Explain the provided sentence in simple Egyptian Arabic, but keep all medical terms in English. To make studying easier, structure your response with these sections: 1) <strong>المعنى ببساطة:</strong> A simple explanation. 2) <strong>تشبيه من الحياة:</strong> A clever real-life analogy (تشبيه بلدي). 3) <strong>عشان تفتكرها (بصمجة):</strong> A funny or clever memory trick/mnemonic to memorize it for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
+        { role: "system", content: "You are a friendly senior Egyptian doctor explaining medical concepts to a medical student. Your ONLY task is to explain the specific sentence provided by the user. Do NOT explain unrelated topics. Explain the provided sentence in simple Egyptian Arabic. CRITICAL RULE: All medical terms, anatomical names, diseases, definitions, and informational keywords MUST be kept strictly in English and MUST NOT be translated to Arabic under any circumstances (e.g. write 'central incisors' instead of 'القواطع المركزية'). To make studying easier, structure your response with these sections: 1) <strong>المعنى ببساطة:</strong> A simple explanation. 2) <strong>تشبيه من الحياة:</strong> A clever real-life analogy (تشبيه بلدي). 3) <strong>عشان تفتكرها (بصمجة):</strong> A funny or clever memory trick/mnemonic to memorize it for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
         { role: "user", content: `Concept to explain: "${textToExplain}"` }
     ];
 
@@ -398,4 +513,43 @@ function escapeHtml(str) {
 // Initialize on DOM ready
 window.addEventListener('DOMContentLoaded', () => {
     // renderRems will be called by refreshAppUI in app.js
+    
+    // Flashcard keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        const reviewModal = document.getElementById('review-modal');
+        if (reviewModal && reviewModal.style.display !== 'none') {
+            const btnShowAnswer = document.getElementById('btn-show-answer');
+            const srsButtons = document.getElementById('srs-buttons');
+            
+            if (btnShowAnswer && btnShowAnswer.style.display !== 'none') {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    window.showAnswer();
+                }
+            } else if (srsButtons && srsButtons.style.display !== 'none') {
+                if (e.key === '1') {
+                    e.preventDefault();
+                    window.submitReview('disable');
+                } else if (e.key === '2') {
+                    e.preventDefault();
+                    window.submitReview('forgot');
+                } else if (e.key === '3') {
+                    e.preventDefault();
+                    window.submitReview('easy');
+                }
+            }
+            
+            // Arrow key navigation
+            if (e.key === 'ArrowLeft') { e.preventDefault(); window.reviewNavPrev(); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); window.reviewNavNext(); }
+        }
+        
+        // Escape closes any open fullscreen
+        if (e.key === 'Escape') {
+            const reviewModal = document.getElementById('review-modal');
+            const examModal = document.getElementById('exam-modal');
+            if (reviewModal && reviewModal.style.display !== 'none') window.closeFullscreen('review-modal');
+            if (examModal && examModal.style.display !== 'none') window.closeFullscreen('exam-modal');
+        }
+    });
 });

@@ -111,17 +111,20 @@ window.docExplainText = async function () {
     hidePopover(); // Hide the selection menu
 
     if (typeof window.openModal === 'function') {
-        window.openModal('doc-explain-modal');
+        window.openFullscreen('doc-explain-modal');
     } else {
         const m = document.getElementById('doc-explain-modal');
         if (m) m.style.display = 'flex';
     }
 
+    const modalContainer = document.getElementById('doc-explain-modal-container');
+    if (modalContainer) modalContainer.style.maxWidth = '600px';
+
     const contentDiv = document.getElementById('doc-explain-modal-content');
     contentDiv.innerHTML = '<div style="color:var(--accent-active); text-align: center; margin-top: 20px;">جاري التحليل كطبيب استشاري...</div>';
 
     const messages = [
-        { role: "system", content: "You are a friendly senior Egyptian doctor explaining medical concepts to a medical student. Your ONLY task is to explain the specific sentence provided by the user. Do NOT explain unrelated topics. Explain the provided sentence in simple Egyptian Arabic, but keep all medical terms in English. To make studying easier, structure your response with these sections: 1) <strong>المعنى ببساطة:</strong> A simple explanation. 2) <strong>تشبيه من الحياة:</strong> A clever real-life analogy (تشبيه بلدي). 3) <strong>عشان تفتكرها (بصمجة):</strong> A funny or clever memory trick/mnemonic to memorize it for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
+        { role: "system", content: "You are a friendly senior Egyptian doctor explaining medical concepts to a medical student. Your ONLY task is to explain the specific sentence provided by the user. Do NOT explain unrelated topics. Explain the provided sentence in simple Egyptian Arabic. CRITICAL RULE: All medical terms, anatomical names, diseases, definitions, and informational keywords MUST be kept strictly in English and MUST NOT be translated to Arabic under any circumstances (e.g. write 'central incisors' instead of 'القواطع المركزية'). To make studying easier, structure your response with these sections: 1) <strong>المعنى ببساطة:</strong> A simple explanation. 2) <strong>تشبيه من الحياة:</strong> A clever real-life analogy (تشبيه بلدي). 3) <strong>عشان تفتكرها (بصمجة):</strong> A funny or clever memory trick/mnemonic to memorize it for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
         { role: "user", content: `Sentence to explain: "${textToExplain}"` }
     ];
 
@@ -305,3 +308,42 @@ window.tabletFlashcard = function() {
 };
 
 
+
+window.explainCurrentSummary = async function () {
+    if (!window.currentSummaryTopic) return;
+    const doc = window.getActiveDoc ? window.getActiveDoc() : null;
+    if (!doc || !doc.sections) return;
+    const sec = doc.sections.find(s => s.title === window.currentSummaryTopic);
+    if (!sec || !sec.summaryCache) return;
+
+    const textToExplain = sec.summaryCache; // The entire summary
+
+    if (typeof window.openModal === 'function') {
+        window.openFullscreen('doc-explain-modal');
+    } else {
+        const m = document.getElementById('doc-explain-modal');
+        if (m) m.style.display = 'flex';
+    }
+
+    const modalContainer = document.getElementById('doc-explain-modal-container');
+    if (modalContainer) modalContainer.style.maxWidth = '1200px';
+
+    const contentDiv = document.getElementById('doc-explain-modal-content');
+    contentDiv.innerHTML = '<div style="color:var(--accent-active); text-align: center; margin-top: 20px;">جاري تحليل الملخص بالكامل كطبيب استشاري... (قد يستغرق بعض الوقت)</div>';
+
+    const messages = [
+        { role: "system", content: "You are a friendly senior Egyptian doctor explaining a full topic summary to a medical student. Your task is to exhaustively and comprehensively explain EVERY SINGLE FACT, concept, sub-point, and example present in the provided text. You MUST NOT miss a single point. Do NOT summarize or be brief; you must break down the entire text exhaustively so the student fully understands the whole topic before reading it. Explain in simple Egyptian Arabic. CRITICAL RULE: All medical terms, anatomical names, diseases, definitions, and informational keywords MUST be kept strictly in English and MUST NOT be translated to Arabic under any circumstances (e.g. write 'central incisors' instead of 'القواطع المركزية'). Structure your response with these sections: 1) <strong>نظرة عامة (المعنى ببساطة):</strong> A simple introduction to the topic. 2) <strong>شرح تفصيلي لكل نقطة:</strong> Go through the provided text paragraph by paragraph, point by point. Extract EVERY SINGLE concept and example mentioned in the text and explain it thoroughly. Do not skip any details. 3) <strong>تشبيه من الحياة:</strong> Clever real-life analogies (تشبيه بلدي) for the main concepts. 4) <strong>عشان تفتكرها (بصمجة):</strong> Funny or clever memory tricks/mnemonics to memorize the key points for exams. Format your explanation beautifully using simple HTML tags like <ul>, <li>, and <strong>. Do NOT use any inline CSS colors or backgrounds. Ensure text layout and alignment are proper for RTL formatting mixed with LTR English words. Return ONLY the HTML without any markdown formatting." },
+        { role: "user", content: `Text to explain: "${textToExplain}"` }
+    ];
+
+    if (typeof callGroqAPI !== 'undefined') {
+        const reply = await callGroqAPI(messages, false);
+        if (reply && !reply._error) {
+            // Remove markdown code blocks if any
+            let cleanReply = reply.replace(/```html/gi, '').replace(/```/g, '').trim();
+            contentDiv.innerHTML = cleanReply;
+        } else {
+            contentDiv.innerHTML = '<div style="color:red; text-align: center;">حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.</div>';
+        }
+    }
+}
