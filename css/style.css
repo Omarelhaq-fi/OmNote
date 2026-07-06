@@ -1340,7 +1340,7 @@ body.sidebar-closed .markdown-body {
     border: 1px solid var(--border-medium);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg), var(--shadow-glow-cyan);
-    z-index: 9999;
+    z-index: 10010;
     flex-direction: row;
     overflow: hidden;
 }
@@ -1862,5 +1862,796 @@ body.sidebar-closed .markdown-body {
         display: none !important;
     }
 }
+
+/* ============================================================
+   DOC EXPLAIN MODAL - ENGAGING FORMATTING
+   ============================================================ */
+.engaging-reading {
+    /* Base typography adjustments */
+}
+
+.engaging-reading strong {
+    color: var(--accent-cyan);
+    font-weight: 800;
+    text-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+}
+
+.engaging-reading ul, .engaging-reading ol {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 28px;
+}
+
+.engaging-reading li {
+    position: relative;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 16px 44px 16px 20px; /* Right padding larger for RTL emoji */
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    line-height: 1.8;
+}
+
+.engaging-reading li:hover {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(139, 92, 246, 0.04));
+    border-color: rgba(6, 182, 212, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.engaging-reading li::before {
+    content: '✨';
+    position: absolute;
+    right: 16px;
+    top: 17px;
+    font-size: 1.05rem;
+    filter: drop-shadow(0 0 4px rgba(6,182,212,0.4));
+}
+
+.engaging-reading p {
+    margin-bottom: 18px;
+}
+
+/* ============================================================
+   USMLE-STYLE FULL-SCREEN EXAM & FLASHCARD VIEWER (LIGHT MODE)
+   ============================================================ */
+
+/* Full-screen overlay — replaces entire viewport */
+.usmle-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    flex-direction: column;
+    background: #dce3f0;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    color: #1a2035;
+    overflow: hidden;
+}
+
+/* ---- Top Navigation Bar ---- */
+.usmle-topbar {
+    height: 52px;
+    background: #1a3a6c;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+    border-bottom: 2px solid #132e58;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    gap: 16px;
+}
+
+.usmle-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 220px;
+}
+
+.usmle-topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    justify-content: center;
+}
+
+.usmle-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+    justify-content: flex-end;
+}
+
+.usmle-item-info {
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: rgba(255,255,255,0.08);
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.12);
+    white-space: nowrap;
+}
+
+.usmle-block-info {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.usmle-nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #ffffff;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.usmle-nav-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+}
+
+.usmle-nav-counter {
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    min-width: 60px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.usmle-tool-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.85);
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.usmle-tool-btn:hover {
+    background: rgba(255,255,255,0.18);
+    color: #ffffff;
+}
+
+/* ---- Body layout: sidebar + content ---- */
+.usmle-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ---- Left Sidebar (question/card number list) ---- */
+.usmle-sidebar {
+    width: 58px;
+    background: #1a3a6c;
+    border-right: 2px solid #132e58;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 8px 0;
+}
+
+.usmle-sidebar::-webkit-scrollbar { width: 4px; }
+.usmle-sidebar::-webkit-scrollbar-track { background: transparent; }
+.usmle-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+.usmle-sidebar-item {
+    width: 40px;
+    height: 28px;
+    margin: 2px auto;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    position: relative;
+}
+.usmle-sidebar-item:hover {
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+}
+.usmle-sidebar-item.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #1d4ed8;
+    box-shadow: 0 0 8px rgba(37,99,235,0.4);
+}
+.usmle-sidebar-item.flagged::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    background: #f59e0b;
+    border-radius: 50%;
+}
+.usmle-sidebar-item.answered {
+    background: rgba(34,197,94,0.15);
+    color: rgba(255,255,255,0.8);
+    border-color: rgba(34,197,94,0.2);
+}
+
+/* ---- Main Content Area ---- */
+.usmle-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.usmle-question-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 48px;
+    background: #f4f6fb;
+}
+
+.usmle-question-area::-webkit-scrollbar { width: 6px; }
+.usmle-question-area::-webkit-scrollbar-track { background: #e8ecf5; }
+.usmle-question-area::-webkit-scrollbar-thumb { background: #b0bbcc; border-radius: 4px; }
+.usmle-question-area::-webkit-scrollbar-thumb:hover { background: #8a96ad; }
+
+/* Question text */
+.usmle-question-text {
+    font-size: 1.02rem;
+    line-height: 1.75;
+    color: #1a2035;
+    margin-bottom: 28px;
+    max-width: 820px;
+    white-space: pre-wrap;
+}
+
+/* MCQ Options inside the exam viewer */
+.usmle-mcq-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    max-width: 620px;
+}
+
+.usmle-option {
+    padding: 10px 16px;
+    border: 1.5px solid #b0bbcc;
+    border-radius: 4px;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #1a2035;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+}
+.usmle-option:hover {
+    background: #e8f0fe;
+    border-color: #2563eb;
+    color: #1a3a6c;
+}
+.usmle-option .usmle-opt-letter {
+    font-weight: 800;
+    color: #1a3a6c;
+    min-width: 18px;
+    flex-shrink: 0;
+}
+.usmle-option.selected {
+    background: #dbeafe;
+    border-color: #2563eb;
+    color: #1a3a6c;
+}
+.usmle-option.correct {
+    background: rgba(34,197,94,0.12);
+    border-color: #16a34a;
+    color: #14532d;
+    pointer-events: none;
+}
+.usmle-option.incorrect {
+    background: rgba(239,68,68,0.1);
+    border-color: #dc2626;
+    color: #7f1d1d;
+    pointer-events: none;
+}
+.usmle-option.revealed-correct {
+    background: rgba(34,197,94,0.12);
+    border-color: #16a34a;
+    color: #14532d;
+    pointer-events: none;
+}
+
+/* Flashcard answer reveal area */
+.usmle-answer-reveal {
+    background: #ffffff;
+    border: 2px solid #2563eb;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #1a3a6c;
+    max-width: 820px;
+    animation: fadeInUp 0.3s ease;
+    white-space: pre-wrap;
+}
+.usmle-answer-reveal::before {
+    content: '✓ Answer';
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #2563eb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+/* Sources block */
+.usmle-sources-block {
+    margin-top: 24px;
+    border: 1px solid #b0bbcc;
+    border-radius: 6px;
+    overflow: hidden;
+    max-width: 820px;
+}
+.usmle-sources-header {
+    background: #e8ecf5;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #1a3a6c;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.usmle-sources-block .sources-quote {
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    color: #2d3a4a;
+    line-height: 1.6;
+    font-style: italic;
+    border-left: 3px solid #2563eb;
+    margin: 12px 16px;
+    background: #f8f9fc;
+}
+
+/* Show answer button */
+.usmle-show-answer-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 11px 32px;
+    border-radius: 5px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 24px;
+    display: inline-block;
+}
+.usmle-show-answer-btn:hover {
+    background: #1d4ed8;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    transform: translateY(-1px);
+}
+
+/* Flag button */
+.usmle-flag-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.8);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.usmle-flag-btn:hover {
+    background: rgba(245,158,11,0.2);
+    border-color: #f59e0b;
+    color: #fcd34d;
+}
+.usmle-flag-btn.flagged {
+    background: rgba(245,158,11,0.2);
+    border-color: #f59e0b;
+    color: #fcd34d;
+}
+
+/* Inside usmle-question-area (not statusbar), flag btn has different colors */
+.usmle-question-area .usmle-flag-btn {
+    border-color: #b0bbcc;
+    color: #4a5568;
+    background: #ffffff;
+}
+.usmle-question-area .usmle-flag-btn:hover {
+    background: #fff8e1;
+    border-color: #f59e0b;
+    color: #d97706;
+}
+.usmle-question-area .usmle-flag-btn.flagged {
+    background: #fff8e1;
+    border-color: #f59e0b;
+    color: #d97706;
+}
+
+/* ---- Bottom Action Bar ---- */
+.usmle-action-bar {
+    background: #e8ecf5;
+    border-top: 2px solid #c5cedc;
+    padding: 12px 48px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+}
+
+.usmle-proceed-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 9px 22px;
+    border-radius: 5px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.usmle-proceed-btn:hover {
+    background: #1d4ed8;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.3);
+    transform: translateY(-1px);
+}
+
+.usmle-btn-end {
+    background: #dc2626;
+}
+.usmle-btn-end:hover {
+    background: #b91c1c;
+    box-shadow: 0 3px 10px rgba(220,38,38,0.3);
+}
+
+.usmle-btn-disable {
+    background: #64748b;
+}
+.usmle-btn-disable:hover {
+    background: #475569;
+    box-shadow: 0 3px 10px rgba(100,116,139,0.3);
+}
+
+.usmle-btn-forgot {
+    background: #dc2626;
+}
+.usmle-btn-forgot:hover {
+    background: #b91c1c;
+    box-shadow: 0 3px 10px rgba(220,38,38,0.3);
+}
+
+.usmle-btn-easy {
+    background: #16a34a;
+}
+.usmle-btn-easy:hover {
+    background: #15803d;
+    box-shadow: 0 3px 10px rgba(22,163,74,0.3);
+}
+
+/* ---- Bottom Status Bar ---- */
+.usmle-statusbar {
+    height: 42px;
+    background: #1a3a6c;
+    border-top: 2px solid #132e58;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+    color: #a0b4cc;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Exam question card inside the USMLE viewer */
+.usmle-question-card {
+    max-width: 820px;
+}
+
+.usmle-question-num {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1a3a6c;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #c5cedc;
+}
+
+.usmle-question-body {
+    font-size: 1.0rem;
+    line-height: 1.75;
+    color: #1a2035;
+    margin-bottom: 24px;
+    white-space: pre-wrap;
+}
+
+/* AI explanation box inside USMLE viewer */
+.usmle-explain-box {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: #f0f4ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: #1e3a5f;
+}
+
+/* Theme toggle: Dark mode override for USMLE screens */
+body.dark-exam .usmle-fullscreen {
+    background: #0f1117;
+    color: #e2e8f0;
+}
+body.dark-exam .usmle-question-area {
+    background: #111827;
+}
+body.dark-exam .usmle-question-text,
+body.dark-exam .usmle-question-body {
+    color: #e2e8f0;
+}
+body.dark-exam .usmle-option {
+    background: #1a2035;
+    border-color: rgba(99,130,200,0.25);
+    color: #e2e8f0;
+}
+body.dark-exam .usmle-option .usmle-opt-letter { color: #60a5fa; }
+body.dark-exam .usmle-option:hover {
+    background: rgba(37,99,235,0.15);
+    border-color: #2563eb;
+}
+body.dark-exam .usmle-option.selected { background: rgba(37,99,235,0.2); }
+body.dark-exam .usmle-answer-reveal {
+    background: rgba(37,99,235,0.08);
+    border-color: #2563eb;
+    color: #93c5fd;
+}
+body.dark-exam .usmle-action-bar {
+    background: #1a2035;
+    border-top-color: rgba(99,130,200,0.2);
+}
+body.dark-exam .usmle-sources-block {
+    border-color: rgba(99,130,200,0.2);
+}
+body.dark-exam .usmle-sources-header {
+    background: rgba(99,130,200,0.1);
+    color: #93c5fd;
+}
+body.dark-exam .usmle-sources-block .sources-quote {
+    color: #94a3b8;
+    background: rgba(0,0,0,0.2);
+}
+
+/* ============================================================
+   GLOBAL LIGHT MODE TOGGLE (Workspace & UI)
+   ============================================================ */
+body.app-light-mode {
+    --bg-deep: #f0f4f8;
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-elevated: #e2e8f0;
+    --bg-glass: rgba(255, 255, 255, 0.75);
+    --bg-glass-strong: rgba(255, 255, 255, 0.95);
+
+    --border-subtle: rgba(15, 23, 42, 0.08);
+    --border-medium: rgba(15, 23, 42, 0.15);
+    --border-glow: rgba(37, 99, 235, 0.25);
+
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #475569;
+    --text-dim: #64748b;
+
+    /* Maintain gradients but adjust shadow intensities for light mode */
+    --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.12);
+    --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
+    --shadow-glow-cyan: 0 0 15px rgba(6,182,212,0.3);
+    --shadow-glow-violet: 0 0 15px rgba(139,92,246,0.3);
+
+    --flashcard-bg: rgba(245, 158, 11, 0.15);
+    --flashcard-text: #b45309;
+}
+
+body.app-light-mode::before {
+    /* Mesh background for light mode */
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(6,182,212,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139,92,246,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 50% 50%, rgba(59,130,246,0.06) 0%, transparent 70%);
+}
+
+/* Modal Content in light mode needs background/text overrides specifically if they hardcode colors */
+body.app-light-mode .modal {
+    background: rgba(240, 244, 248, 0.85); /* lighter overlay */
+}
+
+body.app-light-mode .exam-modal-content {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid var(--border-medium);
+    box-shadow: var(--shadow-lg);
+}
+
+body.app-light-mode .btn-dark-pill {
+    background: #e2e8f0;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+
+body.app-light-mode .btn-dark-pill:hover {
+    background: #cbd5e1;
+}
+
+/* Topbar override for light mode to match USMLE feel */
+body.app-light-mode #topbar {
+    background: #1a3a6c; /* USMLE Navy */
+    border-bottom: 1px solid #132e58;
+    box-shadow: 0 4px 12px rgba(26, 58, 108, 0.2);
+    color: #ffffff;
+}
+body.app-light-mode #topbar .doc-title,
+body.app-light-mode #topbar .btn-icon,
+body.app-light-mode #topbar .main-nav-tab {
+    color: #ffffff;
+}
+body.app-light-mode #topbar .doc-subtitle {
+    color: #93c5fd;
+}
+body.app-light-mode #topbar .main-nav-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+body.app-light-mode #topbar .main-nav-tab.active {
+    background: #2563eb; /* USMLE Bright Blue */
+    color: #ffffff;
+    border: 1px solid #3b82f6;
+}
+
+/* Sidebar override for light mode to match USMLE feel */
+body.app-light-mode #sidebar-menu {
+    background: #1a3a6c; /* USMLE Navy */
+    border-right: 1px solid #132e58;
+    color: #ffffff;
+}
+body.app-light-mode #sidebar-menu .sidebar-header h2,
+body.app-light-mode #sidebar-menu .sidebar-section-label,
+body.app-light-mode #sidebar-menu .btn-icon,
+body.app-light-mode #sidebar-menu .stat-card {
+    color: #ffffff;
+}
+body.app-light-mode #sidebar-menu .stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+body.app-light-mode .doc-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+body.app-light-mode .doc-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Summary View & Markdown overrides for Light Mode (Eye-Comfort Reading Mode) */
+body.app-light-mode #summary-view {
+    /* Matching the clean gray-blue background of the flashcard viewer */
+    background: #f4f6fb; 
+}
+
+body.app-light-mode .markdown-body {
+    /* Soft charcoal text, never pure black for long reading */
+    color: #2c3338;
+    line-height: 1.7; /* Slightly increased for readability */
+}
+body.app-light-mode .markdown-body h1 {
+    /* Deep slate blue for primary headings to anchor the eye */
+    color: #1a3a6c; /* Match USMLE Navy */
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+}
+body.app-light-mode .markdown-body h2 {
+    color: #1e3a8a; /* Dark blue */
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 6px;
+}
+body.app-light-mode .markdown-body h3,
+body.app-light-mode .markdown-body h4 {
+    /* Muted slate for subheadings */
+    color: #2563eb; /* Bright blue */
+}
+body.app-light-mode .markdown-body p,
+body.app-light-mode .markdown-body ul,
+body.app-light-mode .markdown-body ol {
+    color: #2c3338;
+}
+body.app-light-mode .markdown-body strong {
+    /* Bolder but not completely black */
+    color: #0f172a;
+    background: rgba(37, 99, 235, 0.08); /* Subtle blue highlight behind bold terms */
+    padding: 0 2px;
+    border-radius: 2px;
+}
+body.app-light-mode .markdown-body code {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+body.app-light-mode .markdown-body blockquote {
+    border-left: 4px solid #2563eb; /* Blue accent */
+    background: #ffffff;
+    color: #334155;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Study Plan Section overrrides (Summary Chunks) */
+body.app-light-mode .accordion-item {
+    background: #ffffff;
+    border: 1px solid #bfdbfe; /* Light blue border */
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05);
+}
+body.app-light-mode .accordion-header {
+    background: #f4f6fb;
+    color: #1a3a6c; /* USMLE Navy text */
+    border-bottom: 1px solid #e2e8f0;
+}
+body.app-light-mode .accordion-header:hover {
+    background: #eff6ff;
+}
+body.app-light-mode .accordion-content {
+    color: #334155;
+}
+body.app-light-mode .acc-num {
+    background: none;
+    -webkit-text-fill-color: #2563eb; /* USMLE bright blue */
+    color: #2563eb;
+}
+
+/* Doc Explain overrides */
+body.app-light-mode .engaging-reading {
+    color: #1a3a6c !important; /* Navy text for the doctor explanation */
+}
+
 
 
