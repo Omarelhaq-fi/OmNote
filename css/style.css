@@ -428,7 +428,7 @@ body::before {
    TOP NAVIGATION BAR
    ============================================================ */
 #topbar {
-    height: 60px;
+    min-height: 60px;
     background: var(--bg-glass-strong);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -472,6 +472,26 @@ body::before {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* Tablet responsive layout for topbar */
+@media (max-width: 1100px) {
+    #topbar {
+        flex-wrap: wrap;
+        padding: 10px 20px;
+        gap: 10px;
+    }
+    .topbar-left, .topbar-right {
+        flex: 1;
+    }
+    .topbar-center {
+        position: static;
+        transform: none;
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 5px;
+    }
 }
 
 /* --- Main Navigation Tabs (Center) --- */
@@ -688,7 +708,7 @@ body::before {
     display: none;
     padding: 48px 40px;
     overflow-y: auto;
-    height: calc(100vh - 60px);
+    flex: 1;
     width: 100%;
     background: var(--bg-base);
     animation: fadeInUp 0.4s var(--transition-smooth);
@@ -822,7 +842,6 @@ body::before {
 #workspace {
     display: flex;
     flex: 1;
-    height: calc(100vh - 60px);
     overflow: hidden;
 }
 
@@ -2653,5 +2672,14 @@ body.app-light-mode .engaging-reading {
     color: #1a3a6c !important; /* Navy text for the doctor explanation */
 }
 
-
-
+/* Quiz Cards Light Mode overrides */
+body.app-light-mode .quiz-card {
+    background: #ffffff;
+    border: 1px solid var(--border-medium);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+body.app-light-mode .quiz-input {
+    background: #f8fafc;
+    border: 1px solid var(--border-medium);
+    color: var(--text-primary);
+}
