@@ -733,6 +733,12 @@ window.toggleAppTheme = function() {
     const isLight = document.body.classList.contains('app-light-mode');
     localStorage.setItem('omnote_theme', isLight ? 'light' : 'dark');
     
+    if (isLight) {
+        document.body.classList.remove('dark-exam');
+    } else {
+        document.body.classList.add('dark-exam');
+    }
+    
     const btn = document.getElementById('theme-toggle-btn');
     if (btn) btn.innerText = isLight ? '🌙' : '☀️';
 };
@@ -741,7 +747,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const theme = localStorage.getItem('omnote_theme');
     if (theme === 'light') {
         document.body.classList.add('app-light-mode');
+        document.body.classList.remove('dark-exam');
         const btn = document.getElementById('theme-toggle-btn');
         if (btn) btn.innerText = '🌙';
+    } else {
+        document.body.classList.remove('app-light-mode');
+        document.body.classList.add('dark-exam');
     }
 });
